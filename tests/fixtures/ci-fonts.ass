@@ -1,0 +1,26 @@
+[Script Info]
+Title: OFL fonts release regression: TTC, CFF, shaping, vertical and animation
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 360
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[Aegisub Project Garbage]
+Video File: editor-only.mkv
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Noto Sans,38,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2,2,5,20,20,20,1
+Style: CJK,Noto Sans SC,38,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,5,20,20,20,1
+Style: Vertical,@Noto Sans SC,32,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1,1,5,20,20,20,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,office ffi á Ω Ж {\i1}Italic{\i0} TTC face 1
+Dialogue: 0,0:00:01.00,0:00:02.00,CJK,,0,0,0,,中文标点「字体」、。{\1c&H000000&\3c&HFFFFFF&}黑字透明阴影
+Dialogue: 0,0:00:02.00,0:00:03.00,Default,,0,0,0,,{\move(500,180,750,180)\fad(100,150)\t(0,900,\fscx120)}TTC {\fnNoto Sans SC\b400}中文{\rDefault} RESET
+Dialogue: 0,0:00:03.00,0:00:04.00,Vertical,,0,0,0,,{\frz270}竖排「中文」{\fnNoto Sans SC\frz0}横排{\fn@Noto Sans SC\frz270}恢复
+
+[Aegisub Extradata]
+Data: 0,editor-only,value

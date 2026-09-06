@@ -71,7 +71,7 @@ static void init(Context *ctx, const char *dir, const char *file, const char *tt
 }
 
 static unsigned char *render(Context *ctx, long long time, const char *dir, size_t *visible) {
-    unsigned char *pixels = calloc(WIDTH * HEIGHT * 3, 1);
+    unsigned char *pixels = calloc(WIDTH * HEIGHT * 4, 1);
     if (!pixels) die("out of memory");
     int change;
     ASS_Image *head = ass_render_frame(ctx->renderer, ctx->track, time, &change);
@@ -80,27 +80,30 @@ static unsigned char *render(Context *ctx, long long time, const char *dir, size
         int opacity = 255 - (im->color & 255);
         for (int y = 0; y < im->h; y++) for (int x = 0; x < im->w; x++) {
             int px = im->dst_x + x, py = im->dst_y + y;
-            if (px < 0 || px >= WIDTH || py < 0 || py >= HEIGHT) die("image outside frame");
+            if (px < 0 || px >= WIDTH || py < 0 || py >= HEIGHT) continue;
             int alpha = (im->bitmap[y * im->stride + x] * opacity + 127) / 255;
-            size_t offset = ((size_t)py * WIDTH + px) * 3;
+            size_t offset = ((size_t)py * WIDTH + px) * 4;
             for (int c = 0; c < 3; c++) pixels[offset + c] = (rgb[c] * alpha + pixels[offset + c] * (255 - alpha) + 127) / 255;
+            pixels[offset + 3] = alpha + (pixels[offset + 3] * (255 - alpha) + 127) / 255;
         }
     }
     *visible = 0;
-    for (size_t i = 0; i < WIDTH * HEIGHT; i++) if (pixels[i*3] || pixels[i*3+1] || pixels[i*3+2]) (*visible)++;
+    for (size_t i = 0; i < WIDTH * HEIGHT; i++) if (pixels[i*4+3]) (*visible)++;
+    // Keep representative frames without emitting hundreds of large files.
+    if (time % 1000 != 500) return pixels;
     char path[4096];
-    snprintf(path, sizeof(path), "%s/%s-%lld.ppm", dir, ctx->name, time);
+    snprintf(path, sizeof(path), "%s/%s-%lld.pam", dir, ctx->name, time);
     FILE *out = fopen(path, "wb");
     if (!out) die("cannot write frame");
-    fprintf(out, "P6\n%d %d\n255\n", WIDTH, HEIGHT);
-    if (fwrite(pixels, 3, WIDTH * HEIGHT, out) != WIDTH * HEIGHT) die("frame write failed");
+    fprintf(out, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 4\nMAXVAL 255\nTUPLTYPE RGB_ALPHA\nENDHDR\n", WIDTH, HEIGHT);
+    if (fwrite(pixels, 4, WIDTH * HEIGHT, out) != WIDTH * HEIGHT) die("frame write failed");
     fclose(out);
     return pixels;
 }
 
 static size_t difference(const unsigned char *a, const unsigned char *b) {
     size_t result = 0;
-    for (size_t i = 0; i < WIDTH * HEIGHT; i++) if (memcmp(a + 3*i, b + 3*i, 3) != 0) result++;
+    for (size_t i = 0; i < WIDTH * HEIGHT; i++) if (memcmp(a + 4*i, b + 4*i, 4) != 0) result++;
     return result;
 }
 
@@ -110,18 +113,21 @@ int main(int argc, char **argv) {
     const char *files[] = {"input.ass", "input.assfonts.ass", "input.ass", "ttc-only.ass", "otf-only.ass"};
     for (int i = 0; i < 5; i++) init(&ctx[i], argv[1], files[i], i == 0 ? argv[2] : NULL, i == 0 ? argv[3] : NULL);
     int ok = 1;
-    printf("{\"libass_version\":%d,\"system_font_provider\":\"NONE\",\"frames\":[", ass_library_version());
-    for (int frame = 0; frame < 4; frame++) {
-        long long time = frame * 1000 + 500;
+    int frame = 0;
+    printf("{\"libass_version\":%d,\"system_font_provider\":\"NONE\",\"comparison\":\"premultiplied RGBA\",\"frames\":[", ass_library_version());
+    // Four-second fixtures: every 100ms plus event boundaries +/- 1ms.
+    for (long long time = 0; time <= 4001; time++) {
+        if (time % 100 != 0 && time % 1000 != 1 && time % 1000 != 999) continue;
         size_t visible[5], diff[5] = {0};
         unsigned char *pixels[5];
         for (int i = 0; i < 5; i++) pixels[i] = render(&ctx[i], time, argv[1], &visible[i]);
         for (int i = 1; i < 5; i++) diff[i] = difference(pixels[0], pixels[i]);
-        if (!visible[0] || diff[1] || visible[2]) ok = 0;
-        if (frame == 0 && !diff[4]) ok = 0;
-        if (frame == 1 && !diff[3]) ok = 0;
+        if ((time % 1000 == 500 && !visible[0]) || diff[1] || visible[2]) ok = 0;
+        if (time == 500 && !diff[4]) ok = 0;
+        if (time == 1500 && !diff[3]) ok = 0;
         printf("%s{\"time_ms\":%lld,\"baseline_visible_pixels\":%zu,\"embedded_visible_pixels\":%zu,\"embedded_different_pixels\":%zu,\"no_fonts_visible_pixels\":%zu,\"ttc_only_different_pixels\":%zu,\"otf_only_different_pixels\":%zu}", frame ? "," : "", time, visible[0], visible[1], diff[1], visible[2], diff[3], diff[4]);
         for (int i = 0; i < 5; i++) free(pixels[i]);
+        frame++;
     }
     if (ctx[0].serious_errors || ctx[1].serious_errors) ok = 0;
     printf("],\"baseline_errors\":%d,\"embedded_errors\":%d,\"passed\":%s}\n", ctx[0].serious_errors, ctx[1].serious_errors, ok ? "true" : "false");
