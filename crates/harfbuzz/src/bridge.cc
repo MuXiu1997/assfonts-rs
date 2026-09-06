@@ -3,10 +3,48 @@
 #include "hb.h"
 #include "hb-subset.h"
 #include <cstdint>
+#include <initializer_list>
 #include <memory>
 
 template <typename T, void (*Destroy)(T*)>
 using owned = std::unique_ptr<T, decltype(Destroy)>;
+
+// Shaping normalizes Unicode before glyph lookup. Keep source cmap entries for
+// canonical compositions/decompositions as well as the literal ASS characters.
+// This operates on font coverage only; the subtitle bytes are never normalized.
+static void add_decomposition(hb_unicode_funcs_t* unicode, hb_set_t* set,
+                              hb_codepoint_t cp) {
+    hb_set_add(set, cp);
+    hb_codepoint_t a, b;
+    if (hb_unicode_decompose(unicode, cp, &a, &b)) {
+        add_decomposition(unicode, set, a);
+        if (b) add_decomposition(unicode, set, b);
+    }
+}
+
+static bool decomposition_available(hb_unicode_funcs_t* unicode,
+                                    const hb_set_t* set, hb_codepoint_t cp) {
+    if (hb_set_has(set, cp)) return true;
+    hb_codepoint_t a, b;
+    return hb_unicode_decompose(unicode, cp, &a, &b) &&
+        decomposition_available(unicode, set, a) &&
+        (!b || decomposition_available(unicode, set, b));
+}
+
+static bool close_normalization(hb_face_t* face, hb_set_t* chars) {
+    owned<hb_set_t, hb_set_destroy> decomposed(hb_set_create(), hb_set_destroy);
+    owned<hb_set_t, hb_set_destroy> available(hb_set_create(), hb_set_destroy);
+    auto* unicode = hb_unicode_funcs_get_default();
+    hb_codepoint_t cp = HB_SET_VALUE_INVALID;
+    while (hb_set_next(chars, &cp)) add_decomposition(unicode, decomposed.get(), cp);
+    hb_face_collect_unicodes(face, available.get());
+    cp = HB_SET_VALUE_INVALID;
+    while (hb_set_next(available.get(), &cp)) {
+        if (decomposition_available(unicode, decomposed.get(), cp)) hb_set_add(chars, cp);
+    }
+    return hb_set_allocation_successful(decomposed.get()) &&
+        hb_set_allocation_successful(available.get()) && hb_set_allocation_successful(chars);
+}
 
 extern "C" {
 hb_blob_t* af_subset(const char* bytes, uint32_t length, uint32_t index,
@@ -21,6 +59,7 @@ hb_blob_t* af_subset(const char* bytes, uint32_t length, uint32_t index,
     hb_set_t* chars = hb_subset_input_unicode_set(input.get());
     hb_set_add_sorted_array(chars, unicodes, count);
     if (!hb_set_allocation_successful(chars)) return nullptr;
+    if (!close_normalization(face.get(), chars)) return nullptr;
     // Keep localized/legacy names and all layout features; retain default
     // glyph closure, bidi closure and hinting for renderer compatibility.
     hb_subset_input_set_flags(input.get(), HB_SUBSET_FLAGS_NAME_LEGACY);
