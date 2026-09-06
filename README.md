@@ -1,0 +1,89 @@
+# assfonts-rs
+
+模块化的原生 ASS 字体处理 CLI：分析字幕、匹配字体、通过静态链接的 HarfBuzz 子集化，再将字体嵌入 ASS。
+
+当前为可运行的 **0.1.0 初始实现**。已验证 macOS / Apple Silicon 单文件发布，使用者无需安装 HarfBuzz、FreeType、libass、Python 或 Rust。字体文件是用户提供的输入。完整兼容范围见下文；尚未覆盖原 assfonts 的全部功能。
+
+## 构建
+
+需要 Rust 1.92+、Git 和 C++17 编译器。macOS 使用 Xcode Command Line Tools。无需 bindgen、libclang、pkg-config 或系统 HarfBuzz。
+
+```sh
+git submodule update --init --recursive
+cargo build --release --locked
+./target/release/assfonts-rs --help
+```
+
+新克隆时使用 `git clone --recurse-submodules <repository-url>`。`vendor/harfbuzz` 固定于 **14.4.0 / 36cb489cb02ce4b92099669ba9f9bea348eff93f**；Cargo 构建不下载或更新其源码。
+
+可执行文件在 `target/release/assfonts-rs`（Windows 为 `.exe`）。macOS 保留系统 `libc++`、`libiconv`、`libSystem` 依赖。Linux 完全静态构建和 Windows CRT 配置见 [构建与发布](docs/building.md)。
+
+## 使用
+
+```sh
+# 可以直接用仓库内的测试字体试运行
+./target/release/assfonts-rs \
+  -i examples/basic.ass \
+  -f vendor/harfbuzz/test/api/fonts/OpenSans-Regular.ttf \
+  -o .validation/example \
+  --report .validation/example/report.json
+
+# 批量处理：输入目录和字体目录递归扫描，可重复指定
+./target/release/assfonts-rs \
+  -i /path/to/subtitles \
+  -f /path/to/fonts -f /another/font.otf \
+  -o /path/to/output -v2
+
+# 检查语法、字体匹配和字符覆盖；不子集化、不创建任何输出
+./target/release/assfonts-rs \
+  -i /path/to/subtitle.ass -f /path/to/fonts --check --json
+```
+
+输出为 `<输入文件名>.assfonts.ass`；省略 `-o` 时写入输入文件所在目录。保持原字幕正文、样式、行尾和 BOM，仅新增 `[Fonts]`。目录扫描自动跳过已有 `*.assfonts.ass`，显式输入已嵌入字体的 ASS 会报错。
+
+- `--report <path>`：写出整个批次的 JSON 报告，包括来源、face index、字符集合和 SHA256。
+- `--json`：将报告输出至 stdout；进度和错误始终在 stderr。
+- `--overwrite`：显式替换已有结果/报告；输入字幕及字体不允许被输出覆盖。
+- `--backend harfbuzz` / `--list-backends`：选择或列出编译进来的子集化后端。
+- 退出码：成功 `0`，处理或 I/O 错误 `1`，命令行参数错误 `2`。
+
+默认不覆盖已有文件。每个结果通过同目录临时文件原子发布；全部字幕成功处理后才开始写出。发布阶段若遇到磁盘或权限错误，之前发布的结果仍会保留，错误信息会说明进度；整个批次不是跨文件事务。字体目录中的损坏字体、重复版本造成的同分匹配、缺字都会报错。
+
+## 模块与插件
+
+| crate | 职责 |
+| --- | --- |
+| `assfonts-core` | 纯内存数据模型、处理管线、`SubtitleCodec` / `FontResolver` / `Subsetter` 接口 |
+| `assfonts-ass` | 基于 `ass-core` 解析语法，跟踪字体状态，编码和插入 ASS 附件 |
+| `assfonts-fonts` | 基于 `ttf-parser` 建立字体目录索引、匹配名称/字重/斜体、验证覆盖 |
+| `assfonts-harfbuzz` | C++17 静态构建与小型 C ABI，封装 HarfBuzz 子集化；唯一包含 Rust FFI 的模块 |
+| `assfonts-cli` | 文件系统、参数、批处理、输出策略、后端注册 |
+
+插件以 **trait 注入 + Cargo feature** 的形式工作，随程序静态编译。嵌入应用可直接提供自己的实现；CLI 增加后端时只需添加 adapter crate、可选依赖和注册项。没有运行时 `.so` / `.dll` 插件加载，也没有不稳定的 Rust 动态 ABI。详见 [接口与扩展](docs/architecture.md)。
+
+## 当前兼容范围
+
+- UTF-8 ASS v4+，Unicode/中英文字体名，TTF、OTF、TTC、OTC。
+- 使用到的 Dialogue 字符，`\fn`、`\b`、`\i`、`\r`、命名样式重置。
+- `\N`、`\n`、`\h`、`\q`，绘图模式 `\p`；绘图坐标不作为字体字符。
+- 常用位置、颜色、缩放、描边、淡入淡出、卡拉 OK 标签，以及不改变字体选择的 `\t`。
+- 字体按名称、字重和斜体评分；允许播放器合成粗体/斜体所需的最近 face，但同分候选必须消除歧义。
+- 同一源 face 的需求合并后只子集化一次。保留字体名称（包括本地化/legacy）、所有布局 feature、默认布局闭包和 hinting；重新验证输出字符覆盖。
+
+**明确拒绝**：已有 `[Fonts]`、非 UTF-8、SSA/v4++、未知样式、无法识别的覆盖标签、`\fe`、`@` 竖排字体，以及改变字体状态的 `\t`。不能可靠处理的输入返回错误，不输出猜测结果。
+
+尚未实现：自动系统字体回退、旧编码转换、字体内部重命名、已有附件合并、跨字幕缓存、跨集共享字体、动态插件和 WASM。字体文件目前全部加载到内存；批处理结果也先保留在内存，因此超大字体库/批次需要分批调用。可变字体、CFF2、彩色字体没有专项渲染验证；不能将格式可解析等同于全量兼容。
+
+## 验证
+
+```sh
+cargo fmt --all -- --check
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
+# 核心与检查模式可以完全移除原生后端
+cargo check -p assfonts-cli --no-default-features --locked
+```
+
+自动测试使用固定 HarfBuzz 子模块内的测试字体，不依赖本机字体。可选的独立 libass 渲染测试需要用户提供字体，见 [渲染测试说明](tests/render/README.md)。2026-09-06 本地测试和链接检查结果见 [验证记录](docs/validation/2026-09-06.md)。
+
+HarfBuzz 源码与许可证位于子模块；其他依赖固定在 `Cargo.lock`。见 [第三方来源](THIRD_PARTY.md)。

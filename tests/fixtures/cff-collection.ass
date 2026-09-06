@@ -1,0 +1,18 @@
+[Script Info]
+Title: Native Rust assfonts E2E probe
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 360
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Hiragino Sans GB W6,48,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,5,20,20,20,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,TTC FACE 2 中文字体验证
+Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,{\fnExpansiva\b400}OTF CFF ABC xyz 0123
+Dialogue: 0,0:00:02.00,0:00:03.00,Default,,0,0,0,,中文 {\fnExpansiva\b400}OTF ABC{\r} 恢复中文
+Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,{\fnExpansiva\b400}RESET{\rDefault} 重置\h空格\N第二行

@@ -1,0 +1,12 @@
+# 第三方来源
+
+| 组件 | 固定方式 | 许可证/来源 |
+| --- | --- | --- |
+| HarfBuzz 14.4.0 | Git submodule `36cb489cb02ce4b92099669ba9f9bea348eff93f` | `vendor/harfbuzz/COPYING`，及子目录中的许可；https://github.com/harfbuzz/harfbuzz |
+| ass-core 0.1.2 | Git revision `5c944eaaff75d4fa957d965964e6c039a183b6b8` + Cargo.lock | 上游 workspace 许可；https://github.com/wiedymi/ass-rs |
+| ASS 附件 6-bit 编码器 | `crates/ass/src/attachment.rs`，改写自 Aegisub 的 UUEncode 实现 | Copyright (c) 2013 Thomas Goyne；宽松 ISC 风格许可全文保留在源码中；https://github.com/Aegisub/Aegisub |
+| ttf-parser、cc、clap、serde 等 Rust 依赖 | Cargo.lock | 各 crate 的许可与源包；可通过 `cargo metadata --locked` 查看 |
+| 测试字体 | HarfBuzz 子模块中已有的 test 数据 | 随相应字体及上游目录记录的许可 |
+| libass 0.17.5（仅可选验证） | 官方 release + SHA256 | ISC；https://github.com/libass/libass |
+
+本项目不包含用户系统字体的原始文件。测试脚本只读取用户显式提供的路径。Rust FFI adapter 是本项目自有小型桥接，不使用旧版 `hb-subset` crate 的内附 HarfBuzz。

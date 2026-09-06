@@ -12,6 +12,7 @@ use std::{collections::BTreeSet, fs, path::PathBuf, process::ExitCode};
 
 #[derive(Parser)]
 #[command(
+    name = "assfonts-rs",
     version,
     about = "Subset fonts and embed them into ASS subtitles",
     long_about = "A modular native ASS font processor. HarfBuzz is statically linked by default. UTF-8 ASS v4+ input; explicit font files/directories; no system font fallback."
