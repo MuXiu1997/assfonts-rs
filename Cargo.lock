@@ -133,6 +133,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "assfonts-wasm"
+version = "0.1.0"
+dependencies = [
+ "assfonts-ass",
+ "assfonts-core",
+ "assfonts-fonts",
+ "assfonts-harfbuzz",
+ "serde_json",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
