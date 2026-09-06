@@ -50,6 +50,35 @@ dumpbin /DEPENDENTS target/release/assfonts-rs.exe
 
 cc crate 会将 Rust 的静态 CRT 选择传给 C++ `/MT` 配置。发布验证应确认没有第三方 HarfBuzz DLL 和需要单独分发的 VC runtime DLL；系统 DLL 仍正常存在。
 
+## WASM（实验性 Emscripten 单模块）
+
+固定版本见 `scripts/wasm-toolchain.json`：Emsdk 4.0.23、Rust
+nightly-2025-12-17 和 `wasm32-unknown-emscripten`。HarfBuzz 仍使用同一子模块。
+构建入口支持本机 macOS 和 Linux，需要 Python 3、Bash、Git 与 rustup。
+
+```sh
+git submodule update --init --recursive
+# 显式安装到 .validation/emsdk，并安装指定 Rust 的 rust-src；不改默认 Rust。
+python3 scripts/setup_wasm.py
+python3 scripts/build_wasm.py
+```
+
+两个入口都接受 `--emsdk /path/to/emsdk`，也可使用 `EMSDK` 环境变量。
+已有 SDK revision 不匹配会拒绝，不自动覆盖其他版本；构建脚本本身不安装工具。
+它校验 Emsdk、emcc、Rust、HarfBuzz 版本并使用 `--locked`，拒绝额外
+`CARGO_ENCODED_RUSTFLAGS`。SDK 环境只影响构建子进程，不修改 shell 启动文件。
+
+Rust 标准库通过 `-Zbuild-std=std,panic_abort` 构建，Rust/C++ 共同链接到一个
+WASM 模块；关闭 C++ exceptions/RTTI 和 Rust release LTO。不使用 WASI。
+输出 `target/wasm/engine.js`、`assfonts-wasm.wasm`、`build-manifest.json` 和
+`licenses/`。清单记录版本、源码状态和两个产物的 SHA-256。编译缓存留在
+`target/emscripten/`；工具、缓存和生成产物均不提交到 Git。
+
+模块提供纯内存 C ABI，没有文件系统；宿主负责读写字体、字幕及加载 WASM。
+配置为 2 MiB 栈和最大 2 GiB 线性内存。普通输入错误返回 JSON；panic/OOM/陷阱
+要求宿主丢弃实例。接口合同见 [WASM crate](../crates/wasm/README.md)。
+该构建目标不会切换现有 Deno 字幕库，也不改变默认原生 CLI 构建。
+
 ## CI
 
 `.github/workflows/ci.yml` 的 macOS、Windows MSVC job 保留原生 Cargo 测试和构建。Linux job 只通过上述入口生成 release 二进制，随后执行静态链接检查、真实开源字体渲染回归及负对照，再次核对 SHA-256 后打包同一文件；不在验证后重新编译。跨平台 Rust 单元测试继续由原生 job 执行。

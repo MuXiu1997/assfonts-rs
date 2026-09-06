@@ -1,0 +1,10 @@
+{
+  "rust": "nightly-2025-12-17",
+  "rustc_version": "1.94.0-nightly",
+  "rustc_commit": "31010ca61",
+  "emsdk": "4.0.23",
+  "emsdk_commit": "c0bb220cb6e6f4e0fabb6f6db9efd53390ef5e56",
+  "harfbuzz_commit": "36cb489cb02ce4b92099669ba9f9bea348eff93f",
+  "target": "wasm32-unknown-emscripten",
+  "deno": "2.5.6"
+}
