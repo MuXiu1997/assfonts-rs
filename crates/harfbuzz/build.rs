@@ -19,7 +19,9 @@ fn main() {
         .file("src/bridge.cc");
     // No pkg-config, FreeType, Fontconfig, CoreText, or dynamic HarfBuzz.
     if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("musl") {
-        build.cpp_link_stdlib("stdc++").cpp_link_stdlib_static(true);
+        // Linux release builds use Zig's target libc++; crt-static selects
+        // its static runtime. Never mix in a host GCC libstdc++ archive.
+        build.cpp_link_stdlib("c++");
     }
     // cc derives /MT vs /MD from Rust's target-feature=crt-static on MSVC.
     build.compile("assfonts_harfbuzz");

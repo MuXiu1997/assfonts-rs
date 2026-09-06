@@ -1,0 +1,62 @@
+{
+  "date": "2026-09-07",
+  "build": {
+    "toolchain": {
+      "rust": "1.92.0",
+      "cargo-zigbuild": "0.23.4",
+      "ziglang": "0.14.1",
+      "target": "x86_64-unknown-linux-musl"
+    },
+    "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+    "git_revision": "e8f5959e8e9572b4bfc79c95fb4c91062393cb4c",
+    "working_tree_dirty": true,
+    "harfbuzz_revision": "36cb489cb02ce4b92099669ba9f9bea348eff93f",
+    "cargo_lock_sha256": "2310b56832b65ba9000b78c36a30565be5bcafa5298a83b1d2e162e9011d29cc",
+    "sha256": "7e9a7773ae4a36388bf5ecbcc759380eaedc0dfdb42ef7f12667e024fae4638f",
+    "binary": "assfonts-rs"
+  },
+  "linux_execution": "Alpine container on x86_64 DOCKER-MUXIU",
+  "github_actions_run": false,
+  "reason": "No Git remote configured",
+  "artifact": {
+    "sha256": "7e9a7773ae4a36388bf5ecbcc759380eaedc0dfdb42ef7f12667e024fae4638f",
+    "fully_static": true,
+    "backends": "harfbuzz"
+  },
+  "ci_font_render": {
+    "samples": 50,
+    "nonempty": 47,
+    "different_pixels": 0,
+    "passed": true,
+    "libass_version": 24137728
+  },
+  "real_corpus": {
+    "cases": 49,
+    "processed": 43,
+    "unchanged_failures": [
+      "s03-t001",
+      "s03-t029",
+      "s09-t001",
+      "s09-t010",
+      "s09-t018",
+      "s10-t001"
+    ],
+    "samples": 143445,
+    "nonempty": 102945,
+    "different_frames": 0,
+    "identical_image_lists": 143445,
+    "renderer": "local macOS libass 0.17.5; inputs produced by the Linux release artifact"
+  },
+  "normalization_fix": {
+    "before_different_pixels_at_500ms": 171,
+    "after_different_pixels_at_500ms": 0,
+    "subtitle_bytes_preserved": true
+  },
+  "native_tests_passed": 20,
+  "fmt": true,
+  "clippy": true,
+  "native_disabled_check": true,
+  "actionlint": "1.7.7 passed (shellcheck disabled; bash -n also passed)",
+  "package_sha256": "e3fa98b1356d10160606dbec49ebdf15a04ee195b15fefae394d09a3a2d44165",
+  "corpus_log_audit": "Only existing glyph 0x0 warnings in s03-t004 and s03-t017, present in both baseline and embedded; no new errors."
+}

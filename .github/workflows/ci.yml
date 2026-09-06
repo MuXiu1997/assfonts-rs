@@ -54,34 +54,71 @@ jobs:
             vendor/harfbuzz/COPYING
 
   linux-musl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Test and build with musl-native C++ toolchain
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read Linux toolchain pins
         run: |
-          docker run --rm -v "$PWD:/work" -w /work \
-            -e RUSTFLAGS='-C target-feature=+crt-static' rust:1.92-alpine \
-            sh -ec '
-              apk add --no-cache g++ git binutils
-              git config --global --add safe.directory /work
-              git config --global --add safe.directory /work/vendor/harfbuzz
-              cargo test --workspace --locked --target x86_64-unknown-linux-musl
-              cargo build --release --locked --target x86_64-unknown-linux-musl
-              readelf -l target/x86_64-unknown-linux-musl/release/assfonts-rs > linkage-program.txt
-              readelf -d target/x86_64-unknown-linux-musl/release/assfonts-rs > linkage-dynamic.txt
-              if grep -q INTERP linkage-program.txt || grep -q NEEDED linkage-dynamic.txt; then
-                echo "Binary is not fully static" >&2
-                exit 1
-              fi
-            '
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          pins = json.loads(Path('scripts/linux-toolchain.json').read_text())
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              for key, value in pins.items():
+                  print(f"LINUX_{key.upper().replace('-', '_')}={value}", file=f)
+              print(f"BINARY=target/zigbuild/{pins['target']}/release/assfonts-rs", file=f)
+          PY
+      - name: Install pinned build tools
+        run: |
+          rustup toolchain install "$LINUX_RUST" --profile minimal --target "$LINUX_TARGET"
+          python3 -m pip install "cargo-zigbuild==$LINUX_CARGO_ZIGBUILD" "ziglang==$LINUX_ZIGLANG"
+      - name: Build Linux release through the shared entry point
+        run: python3 scripts/build_linux.py
+      - name: Install independent rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libfreetype6-dev libharfbuzz-dev libfribidi-dev binutils
+          python3 -m pip install -r tests/render/requirements.txt
+      - name: Inspect and execute the release artifact
+        run: python3 scripts/check_linux_artifact.py --binary "$BINARY" --output .validation/artifact
+      - name: Prepare verified open fonts and independent libass
+        run: |
+          python3 tests/render/prepare_fonts.py --output .validation/ci-fonts
+          sh tests/render/build_oracle.sh
+      - name: Render full fonts versus release-generated subsets
+        run: |
+          python3 tests/render/verify.py \
+            --binary "$BINARY" --oracle .validation/oracle/verify_libass \
+            --fixture tests/fixtures/ci-fonts.ass --ttc-face-index 1 \
+            --ttc .validation/ci-fonts/NotoSans.ttc \
+            --otf .validation/ci-fonts/NotoSansSC-Regular.otf \
+            --output .validation/ci-render
+          python3 scripts/check_linux_artifact.py --binary "$BINARY" --output .validation/artifact
+      - name: Package the verified binary without rebuilding
+        run: |
+          mkdir -p .validation/package/licenses
+          cp "$BINARY" "$(dirname "$BINARY")/build-manifest.json" THIRD_PARTY.md .validation/package/
+          cp vendor/harfbuzz/COPYING .validation/package/licenses/harfbuzz-COPYING
+          cp "$(dirname "$BINARY")/runtime-licenses/"* .validation/package/licenses/
+          tar -czf .validation/assfonts-rs-linux-musl.tar.gz -C .validation/package .
       - uses: actions/upload-artifact@v4
         with:
           name: assfonts-rs-linux-musl
+          if-no-files-found: error
+          path: .validation/assfonts-rs-linux-musl.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: assfonts-rs-linux-musl-validation
           path: |
-            target/x86_64-unknown-linux-musl/release/assfonts-rs
-            linkage-program.txt
-            linkage-dynamic.txt
-            THIRD_PARTY.md
-            vendor/harfbuzz/COPYING
+            .validation/artifact/
+            .validation/ci-render/
+            .validation/ci-fonts/font-hashes.json
+            .validation/ci-fonts/*LICENSE
+            .validation/oracle/*.log
+            .validation/oracle/dependency-versions.txt

@@ -2,18 +2,18 @@
 
 此测试不链接进 CLI。普通 `cargo test` 不需要 libass，也不需要本机商业字体。
 
-真实字幕的三组对照方案及已有结果见 [渲染回归设计](../../docs/render-validation.md)。这里的开源字体样例使用真实开源字体和人工编写的四秒字幕，不等同于已有 43 个真实字幕的完整批次。
+真实字幕的三组对照方案及已有结果见 [渲染回归设计](../../docs/render-validation.md)。这里的 CI 样例使用真实开源字体和人工编写的四秒字幕，不等同于已有 43 个真实字幕的完整批次。
 
-## 开源字体回归
+## CI 开源字体回归
 
-以下步骤可验证已有的原生 CLI 二进制。需要 Python、C 编译器、make、curl、pkg-config，以及 FreeType、HarfBuzz、FriBidi 开发包。
+Linux CI 对 `scripts/build_linux.py` 生成的同一个二进制执行以下步骤。需要 Python、C 编译器、make、curl、pkg-config，以及 FreeType、HarfBuzz、FriBidi 开发包。
 
 ```sh
 python3 -m pip install -r tests/render/requirements.txt
 python3 tests/render/prepare_fonts.py --output .validation/ci-fonts
 sh tests/render/build_oracle.sh
 python3 tests/render/verify.py \
-  --binary target/release/assfonts-rs \
+  --binary target/zigbuild/x86_64-unknown-linux-musl/release/assfonts-rs \
   --oracle .validation/oracle/verify_libass \
   --fixture tests/fixtures/ci-fonts.ass --ttc-face-index 1 \
   --ttc .validation/ci-fonts/NotoSans.ttc \

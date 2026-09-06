@@ -9,5 +9,6 @@
 | 测试字体 | HarfBuzz 子模块中已有的 test 数据 | 随相应字体及上游目录记录的许可 |
 | libass 0.17.5（仅测试） | 官方 release + SHA256 | ISC；https://github.com/libass/libass |
 | Noto Sans / Noto Sans SC（仅测试） | `tests/render/fonts.json` 的 commit、URL、SHA256 | OFL 1.1；下载时同时保存两个上游许可证，不链接进 CLI |
+| Zig 提供的 libc++ / libc++abi / libunwind / musl 运行库（Linux） | Zig 0.14.1，见 `scripts/linux-toolchain.json` | 构建时复制各自 LICENSE/COPYRIGHT 和 Zig LICENSE，随 Linux 发布包的 `licenses/` 分发 |
 
-本项目不包含用户系统字体的原始文件。渲染测试只下载固定来源的开源测试字体；商业字体样例只读取用户提供的路径。Rust FFI adapter 是本项目自有小型桥接，不使用旧版 `hb-subset` crate 的内附 HarfBuzz。
+本项目不包含用户系统字体的原始文件。CI 只下载固定来源的开源测试字体；商业字体样例只读取用户提供的路径。Rust FFI adapter 是本项目自有小型桥接，不使用旧版 `hb-subset` crate 的内附 HarfBuzz。

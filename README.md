@@ -2,7 +2,7 @@
 
 模块化的原生 ASS 字体处理 CLI：分析字幕、匹配字体、通过静态链接的 HarfBuzz 子集化，再将字体嵌入 ASS。
 
-当前为可运行的 **0.1.0 初始实现**。已验证 macOS / Apple Silicon 单文件发布，使用者无需安装 HarfBuzz、FreeType、libass、Python 或 Rust。字体文件是用户提供的输入。完整兼容范围见下文；尚未覆盖原 assfonts 的全部功能。
+当前为可运行的 **0.1.0 初始实现**。已验证 macOS / Apple Silicon 和 Linux x86_64 musl 单文件运行，使用者无需安装 HarfBuzz、FreeType、libass、Python 或 Rust。字体文件是用户提供的输入。完整兼容范围见下文；尚未覆盖原 assfonts 的全部功能。
 
 ## 构建
 
@@ -71,6 +71,7 @@ cargo build --release --locked
 - 样式和 `\fn` 的 `@` 竖排字体：查询同一物理字体，合并横排/竖排字符需求，输出保留原始 `@` 布局标记。
 - 字体按名称、字重和斜体评分；允许播放器合成粗体/斜体所需的最近 face，但同分候选必须消除歧义。
 - 同一源 face 的需求合并后只子集化一次。保留字体名称（包括本地化/legacy）、所有布局 feature、默认布局闭包和 hinting；重新验证输出字符覆盖。
+- 子集保留源字体中 Unicode 规范组合/分解所需的字符，例如 `a` + 组合重音对应的 `á`，避免 shaping 规范化后改变显示；不修改字幕文字，不使用兼容性规范化。
 
 **明确拒绝**：已有 `[Fonts]`、非 UTF-8、SSA/v4++、未知样式、无法识别的覆盖标签、`\fe`，以及改变字体状态的 `\t`。不能可靠处理的输入返回错误，不输出猜测结果。
 
@@ -86,6 +87,6 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo check -p assfonts-cli --no-default-features --locked
 ```
 
-自动测试使用固定 HarfBuzz 子模块内的测试字体，不依赖本机字体。可选的独立 libass 渲染测试需要用户提供字体，见 [渲染测试说明](tests/render/README.md)。2026-09-06 本地测试和链接检查结果见 [验证记录](docs/validation/2026-09-06.md)。
+自动测试使用固定 HarfBuzz 子模块内的测试字体，不依赖本机字体。Linux CI 使用 cargo-zigbuild 的实际发布产物，检查静态链接，并用固定来源的 Noto 开源字体进行独立 libass 渲染及负对照测试；商业字体样例保留为可选本地检查，见 [渲染测试说明](tests/render/README.md)。2026-09-06 本地测试和链接检查结果见 [验证记录](docs/validation/2026-09-06.md)。
 
 HarfBuzz 源码与许可证位于子模块；其他依赖固定在 `Cargo.lock`。见 [第三方来源](THIRD_PARTY.md)。

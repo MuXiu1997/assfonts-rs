@@ -12,18 +12,31 @@ otool -L target/release/assfonts-rs
 
 Apple Silicon 本次只有 `/usr/lib/libc++.1.dylib`、`/usr/lib/libiconv.2.dylib`、`/usr/lib/libSystem.B.dylib`。不链接 `/opt/homebrew/...` 下的 HarfBuzz。编译需要 Xcode Command Line Tools；执行不需要。
 
-## Linux musl（CI 配置，未在本机执行）
+## Linux musl（cargo-zigbuild 唯一发布入口）
 
-建议在原生 musl 环境构建，避免混用 glibc 版 C++ 静态库。例如在 Alpine 的 Rust 工具链环境：
+本机和 CI 都执行 `scripts/build_linux.py`，目标固定为 `x86_64-unknown-linux-musl`。版本来源为 `scripts/linux-toolchain.json`：Rust 1.92.0、cargo-zigbuild 0.23.4、Zig 0.14.1。脚本校验版本，不自动安装或升级工具。
 
 ```sh
-apk add --no-cache g++ git binutils
-RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --locked --target x86_64-unknown-linux-musl
-readelf -l target/x86_64-unknown-linux-musl/release/assfonts-rs
-readelf -d target/x86_64-unknown-linux-musl/release/assfonts-rs
+rustup toolchain install 1.92.0 --profile minimal --target x86_64-unknown-linux-musl
+python3 -m venv .validation/linux-tools
+. .validation/linux-tools/bin/activate
+python3 -m pip install cargo-zigbuild==0.23.4 ziglang==0.14.1
+python3 scripts/build_linux.py
 ```
 
-程序头不能包含 `INTERP`，动态段不能包含 `NEEDED`。HarfBuzz build.rs 在 musl 目标静态链接 `libstdc++`。普通 glibc `cargo build` 仍静态链接 HarfBuzz，但可能动态依赖 libc/libstdc++；不能将其标为完全静态包。
+输出为 `target/zigbuild/x86_64-unknown-linux-musl/release/assfonts-rs`，同目录生成 `build-manifest.json`，记录工具版本、Git/HarfBuzz revision、工作区是否有改动、Cargo.lock 和二进制 SHA-256。入口固定输出路径与静态链接 Rust flags，拒绝额外 `CARGO_ENCODED_RUSTFLAGS`。可用 `CARGO_ZIGBUILD_ZIG_PATH` 指定同版本 Zig。
+
+HarfBuzz 在 musl 目标使用 Zig 提供的 libc++，由 `crt-static` 选择静态运行库，不混用宿主机 GCC 的 libstdc++。macOS/Windows 的原生配置不变。普通 glibc `cargo build` 不属于 Linux 发布路线，不能将其产物标为完全静态包。
+
+在 Linux 上验证上述文件（不会重新构建）：
+
+```sh
+python3 scripts/check_linux_artifact.py \
+  --binary target/zigbuild/x86_64-unknown-linux-musl/release/assfonts-rs \
+  --output .validation/artifact
+```
+
+该检查核对构建清单 SHA-256、ELF 架构、程序头没有 `INTERP`、动态段没有 `NEEDED`，并实际执行后端列表。接着执行 [开源字体渲染回归](../tests/render/README.md)，比较完整原始字体与此二进制生成的附件。
 
 ## Windows MSVC（CI 配置，未在本机执行）
 
@@ -39,6 +52,12 @@ cc crate 会将 Rust 的静态 CRT 选择传给 C++ `/MT` 配置。发布验证�
 
 ## CI
 
-`.github/workflows/ci.yml` 配置 macOS、Windows MSVC 和 Linux musl 的测试、release 构建与产物上传。只有 macOS 本次在本地实际验证；增加 CI 配置不等于其他平台已经通过。当前项目尚未创建远程仓库或触发远程构建。
+`.github/workflows/ci.yml` 的 macOS、Windows MSVC job 保留原生 Cargo 测试和构建。Linux job 只通过上述入口生成 release 二进制，随后执行静态链接检查、真实开源字体渲染回归及负对照，再次核对 SHA-256 后打包同一文件；不在验证后重新编译。跨平台 Rust 单元测试继续由原生 job 执行。
+
+Linux 渲染依赖仅供独立测试程序使用：libass 固定 0.17.5 并校验源码 SHA-256，FreeType、HarfBuzz、FriBidi 来自运行环境并记录版本。基准与被测组共用同一渲染器版本，但字体环境完全隔离；不同 CI 镜像不要求历史帧哈希相同。字体下载固定上游 commit 和 SHA-256。
+
+成功时上传 `assfonts-rs-linux-musl.tar.gz`，包含经过验证的可执行文件、构建清单和许可文件，tar 保留执行权限。验证报告、字体许可、日志和代表性帧作为独立 artifact 上传，失败时也尽量保留。当前仓库没有配置远程；本地等价验证不能表述为 GitHub Actions 已通过。
+
+本次实际交叉编译、Linux 运行、组合字符修复和真实样本回归的结果见 [2026-09-07 验证记录](validation/2026-09-07-linux-zigbuild.md)。
 
 CI 不自动发布 release。真正对外发布时，应将构建产物与对应第三方许可通知一同分发；HarfBuzz 原始许可保存在 `vendor/harfbuzz/COPYING` 及其子目录。
