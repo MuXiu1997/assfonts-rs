@@ -2,6 +2,8 @@
 
 此测试不链接进 CLI。普通 `cargo test` 不需要 libass，也不需要本机商业字体。
 
+真实字幕的后续三组对照方案见 [渲染回归设计](../../docs/render-validation.md)：完整原始字体为基准，Rust 为主要被测对象，assfonts 为辅助对照。下述是现有小型样例测试，尚未完整实现该方案。
+
 `verify.py` 使用 `tests/fixtures/cff-collection.ass`，需要以下用户自备字体：
 
 - `Hiragino Sans GB.ttc`：包含 W6，匹配 face index 2。
