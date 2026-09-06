@@ -1,0 +1,11 @@
+[package]
+name = "assfonts-ass"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+assfonts-core.workspace = true
+ass-core = { git = "https://github.com/wiedymi/ass-rs.git", rev = "5c944eaaff75d4fa957d965964e6c039a183b6b8", default-features = false, features = ["std", "analysis", "plugins"] }

@@ -1,0 +1,4 @@
+/target/
+/.validation/
+*.assfonts.ass
+.DS_Store
