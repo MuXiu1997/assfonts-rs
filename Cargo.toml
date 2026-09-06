@@ -1,5 +1,6 @@
 [workspace]
-members = ["crates/core", "crates/ass", "crates/fonts", "crates/harfbuzz"]
+members = ["crates/core", "crates/ass", "crates/fonts", "crates/harfbuzz", "crates/cli"]
+default-members = ["crates/cli"]
 resolver = "2"
 
 [workspace.package]
