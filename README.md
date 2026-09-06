@@ -4,6 +4,10 @@
 
 当前为可运行的 **0.1.0 初始实现**。已验证 macOS / Apple Silicon 和 Linux x86_64 musl 单文件运行，使用者无需安装 HarfBuzz、FreeType、libass、Python 或 Rust。字体文件是用户提供的输入。完整兼容范围见下文；尚未覆盖原 assfonts 的全部功能。
 
+另提供 **实验性 Emscripten 单模块 WASM**，复用相同处理管线；服务器 Deno 2.5.6
+已实际执行验证。构建、测试与已知内存限制见 [WASM 验证说明](tests/wasm/README.md)。
+它不会自动替换现有 Deno 字幕库或原生 CLI。
+
 ## 构建
 
 需要 Rust 1.92+、Git 和 C++17 编译器。macOS 使用 Xcode Command Line Tools。无需 bindgen、libclang、pkg-config 或系统 HarfBuzz。
@@ -56,8 +60,9 @@ cargo build --release --locked
 | `assfonts-core` | 纯内存数据模型、处理管线、`SubtitleCodec` / `FontResolver` / `Subsetter` 接口 |
 | `assfonts-ass` | 基于 `ass-core` 解析语法，跟踪字体状态，编码和插入 ASS 附件 |
 | `assfonts-fonts` | 基于 `ttf-parser` 建立字体目录索引、匹配名称/字重/斜体、验证覆盖 |
-| `assfonts-harfbuzz` | C++17 静态构建与小型 C ABI，封装 HarfBuzz 子集化；唯一包含 Rust FFI 的模块 |
+| `assfonts-harfbuzz` | C++17 静态构建与小型 C ABI，封装 HarfBuzz 子集化 |
 | `assfonts-cli` | 文件系统、参数、批处理、输出策略、后端注册 |
+| `assfonts-wasm` | 实验性纯内存 C ABI，供 Emscripten 单模块宿主调用 |
 
 插件以 **trait 注入 + Cargo feature** 的形式工作，随程序静态编译。嵌入应用可直接提供自己的实现；CLI 增加后端时只需添加 adapter crate、可选依赖和注册项。没有运行时 `.so` / `.dll` 插件加载，也没有不稳定的 Rust 动态 ABI。详见 [接口与扩展](docs/architecture.md)。
 

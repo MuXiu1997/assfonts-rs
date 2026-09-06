@@ -1,0 +1,71 @@
+name: experimental-wasm
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  emscripten:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read runtime pin
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          pins = json.loads(Path('scripts/wasm-toolchain.json').read_text())
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              print(f"WASM_DENO={pins['deno']}", file=f)
+          PY
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: ${{ env.WASM_DENO }}
+      - name: Install pinned build tools
+        run: python3 scripts/setup_wasm.py
+      - name: Build through the shared entry point
+        run: python3 scripts/build_wasm.py
+      - name: Prepare verified open fonts
+        run: |
+          python3 -m pip install -r tests/render/requirements.txt
+          python3 tests/render/prepare_fonts.py --output .validation/ci-fonts
+      - name: Run WASM in Deno without subprocess or network access
+        run: |
+          deno check tests/wasm/verify.ts tests/wasm/worker.ts
+          deno run --allow-read --allow-write --deny-run --deny-net --no-remote \
+            tests/wasm/verify.ts .validation/ci-fonts .validation/wasm-render
+      - name: Prepare independent renderer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libfreetype6-dev libharfbuzz-dev libfribidi-dev
+          sh tests/render/build_oracle.sh
+      - name: Compare rendered RGBA and attachment-removal controls
+        run: |
+          .validation/oracle/verify_libass .validation/wasm-render \
+            .validation/ci-fonts/NotoSans.ttc .validation/ci-fonts/NotoSansSC-Regular.otf \
+            > .validation/wasm-render/render.json
+      - name: Package the verified module without rebuilding
+        run: |
+          cp THIRD_PARTY.md target/wasm/
+          tar -czf .validation/assfonts-wasm-experimental.tar.gz -C target/wasm .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: assfonts-wasm-experimental
+          if-no-files-found: error
+          path: .validation/assfonts-wasm-experimental.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: assfonts-wasm-validation
+          path: |
+            .validation/wasm-render/
+            .validation/ci-fonts/font-hashes.json
+            .validation/ci-fonts/*LICENSE
+            target/wasm/build-manifest.json
+            .validation/oracle/*.log
+            .validation/oracle/dependency-versions.txt
