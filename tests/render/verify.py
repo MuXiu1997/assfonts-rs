@@ -12,12 +12,14 @@ import subprocess
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fixture", type=Path,
+                        default=Path(__file__).parent.parent / "fixtures/cff-collection.ass")
     for name in ("binary", "oracle", "ttc", "otf", "output"):
         parser.add_argument(f"--{name}", type=Path, required=True)
     args = parser.parse_args()
     directory = args.output.resolve()
     directory.mkdir(parents=True, exist_ok=False)
-    shutil.copyfile(Path(__file__).parent.parent / "fixtures/cff-collection.ass", directory / "input.ass")
+    shutil.copyfile(args.fixture, directory / "input.ass")
     subprocess.run([
         str(args.binary.resolve()), "-i", str(directory / "input.ass"),
         "-f", str(args.ttc.resolve()), "-f", str(args.otf.resolve()),

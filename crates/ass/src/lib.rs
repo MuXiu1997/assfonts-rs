@@ -19,6 +19,17 @@ fn integer(value: &str) -> Result<i32> {
         .map_err(|_| invalid(format!("expected integer, got {value:?}")))
 }
 
+fn font_family(name: &str) -> Result<String> {
+    let name = name.trim();
+    // @ selects vertical layout in ASS, not a different physical font.
+    // Normalize only the lookup key; embed() keeps the original style/tag text.
+    let family = name.strip_prefix('@').unwrap_or(name);
+    if family.is_empty() {
+        return Err(invalid("empty font name"));
+    }
+    Ok(family.into())
+}
+
 fn headers(text: &str) -> Result<()> {
     let mut styles = 0;
     let mut events = 0;
@@ -195,16 +206,10 @@ impl SubtitleCodec for AssCodec {
             if let Section::Styles(items) = section {
                 for s in items {
                     let request = FontRequest {
-                        family: s.fontname.trim().into(),
+                        family: font_family(s.fontname)?,
                         weight: if integer(s.bold)? != 0 { 700 } else { 400 },
                         italic: integer(s.italic)? != 0,
                     };
-                    if request.family.is_empty() {
-                        return Err(invalid("empty font name"));
-                    }
-                    if request.family.starts_with('@') {
-                        return Err(Error::Unsupported("vertical @font names".into()));
-                    }
                     if styles.insert(s.name, request).is_some() {
                         return Err(invalid(format!("duplicate style {}", s.name)));
                     }
@@ -270,11 +275,8 @@ fn analyze_event(
                         current.family = if arg.is_empty() || arg == "0" {
                             active_style.family.clone()
                         } else {
-                            arg.into()
+                            font_family(arg)?
                         };
-                        if current.family.starts_with('@') {
-                            return Err(Error::Unsupported("vertical @font names".into()));
-                        }
                     }
                     "b" => {
                         current.weight = if arg.is_empty() {

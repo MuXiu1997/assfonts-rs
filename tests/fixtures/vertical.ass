@@ -1,0 +1,26 @@
+[Script Info]
+Title: Vertical font lookup and Aegisub metadata probe
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 360
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[Aegisub Project Garbage]
+Video File: ignored-editor-state.mkv
+Last Style Storage: Default
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,@Hiragino Sans GB W6,38,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,5,20,20,20,1
+Style: Horizontal,Hiragino Sans GB W6,38,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,5,20,20,20,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,{\frz270}竖排「中文」、。
+Dialogue: 0,0:00:01.00,0:00:02.00,Horizontal,,0,0,0,,{\fn@Expansiva\b400\frz270}ABC 012
+Dialogue: 0,0:00:02.00,0:00:03.00,Horizontal,,0,0,0,,横排{\fn@Hiragino Sans GB W6\frz270}竖排{\rHorizontal}恢复
+Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,{\frz270\fnExpansiva\b400}RESET{\rDefault}重置{\fn}字体
+
+[Aegisub Extradata]
+Data: 0,editor-only,value

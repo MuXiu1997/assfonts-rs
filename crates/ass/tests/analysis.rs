@@ -45,7 +45,7 @@ fn unsupported_or_malformed_input_does_not_succeed() {
         r"{\unknown}X",
         r"{\rMissing}X",
         "{unclosed",
-        r"{\fn@Vertical}X",
+        r"{\fn@}X",
     ] {
         assert!(AssCodec.analyze(&script(text)).is_err(), "{text}");
     }
@@ -53,6 +53,39 @@ fn unsupported_or_malformed_input_does_not_succeed() {
         .analyze(&script("X").replace("Dialogue: 0,", "Dialogue: broken,"))
         .is_err());
     assert!(AssCodec.analyze(&(script("X") + "[Fonts]\n")).is_err());
+}
+
+#[test]
+fn vertical_styles_and_overrides_share_physical_fonts_and_keep_layout_tags() {
+    let horizontal = script(r"A{\fnSecond}B{\rOther}C{\fnFirst}D{\fn}E{\r}F");
+    let vertical = script(r"A{\fn@Second}B{\rOther}C{\fn@First}D{\fn}E{\r}F")
+        .replace("Default,First,", "Default,@First,")
+        .replace("Other,Second,", "Other,@Second,");
+    assert_eq!(
+        AssCodec.analyze(&vertical).unwrap(),
+        AssCodec.analyze(&horizontal).unwrap()
+    );
+    let mixed = script(r"A{\fn@First}B{\fnFirst}C");
+    assert_eq!(
+        AssCodec.analyze(&mixed).unwrap(),
+        AssCodec.analyze(&script("ABC")).unwrap()
+    );
+    let output = AssCodec
+        .embed(
+            &vertical,
+            &[Attachment {
+                name: "test_0.ttf".into(),
+                data: b"Cat".to_vec(),
+            }],
+        )
+        .unwrap();
+    assert_eq!(
+        output.replace("[Fonts]\nfontname: test_0.ttf\n1W&U\n\n", ""),
+        vertical
+    );
+    assert!(AssCodec
+        .analyze(&script("X").replace("Default,First,", "Default,@,"))
+        .is_err());
 }
 
 #[test]

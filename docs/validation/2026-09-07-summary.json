@@ -1,0 +1,10 @@
+{
+  "cases": 43,
+  "samples": 143445,
+  "nonempty": 102945,
+  "different": 0,
+  "exact_image_lists": 143445,
+  "events": 21982,
+  "positive_duration_events": 21646,
+  "animated_events": 1817
+}
