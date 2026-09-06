@@ -1,0 +1,11 @@
+[package]
+name = "assfonts-fonts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+assfonts-core.workspace = true
+ttf-parser.workspace = true
