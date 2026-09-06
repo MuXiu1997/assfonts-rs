@@ -64,6 +64,7 @@ cargo build --release --locked
 ## 当前兼容范围
 
 - UTF-8 ASS v4+，Unicode/中英文字体名，TTF、OTF、TTC、OTC。
+- Aegisub 的 Project Garbage、Project、Extradata 段仅在字体分析时跳过，输出原样保留；其他解析诊断仍会报错。
 - 使用到的 Dialogue 字符，`\fn`、`\b`、`\i`、`\r`、命名样式重置。
 - `\N`、`\n`、`\h`、`\q`，绘图模式 `\p`；绘图坐标不作为字体字符。
 - 常用位置、颜色、缩放、描边、淡入淡出、卡拉 OK 标签，以及不改变字体选择的 `\t`。

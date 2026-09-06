@@ -83,3 +83,55 @@ fn embedding_preserves_bom_crlf_and_event_text() {
         )
         .is_err());
 }
+
+#[test]
+fn aegisub_metadata_is_ignored_for_analysis_and_preserved_on_output() {
+    let plain = script("ABC");
+    let metadata = "[Aegisub Project Garbage]\nVideo File: 片源.mkv\nWrapStyle: broken\nStyle: not a real style\nDialogue: not a real event\n";
+    for (marker, content) in [
+        ("[V4+ Styles]", metadata),
+        ("[Events]", "[aegisub project garbage]\n\n"),
+        ("[Events]", "[Aegisub Project]\nLast Style: Default\n"),
+    ] {
+        let input = format!(
+            "\u{feff}{}[Aegisub Extradata]\r\nData: 0,key,value",
+            plain
+                .replace(marker, &format!("{content}{marker}"))
+                .replace('\n', "\r\n")
+        );
+        assert_eq!(
+            AssCodec.analyze(&input).unwrap(),
+            AssCodec.analyze(&plain).unwrap()
+        );
+        let output = AssCodec
+            .embed(
+                &input,
+                &[Attachment {
+                    name: "test_0.ttf".into(),
+                    data: b"Cat".to_vec(),
+                }],
+            )
+            .unwrap();
+        assert_eq!(
+            output.replace("[Fonts]\r\nfontname: test_0.ttf\r\n1W&U\r\n\r\n", ""),
+            input
+        );
+    }
+}
+
+#[test]
+fn metadata_support_does_not_suppress_other_parser_diagnostics() {
+    let input = script("ABC").replace(
+        "[Events]",
+        "[Aegisub Project Garbage]\nVideo File: test.mkv\n[Events]",
+    );
+    assert!(AssCodec
+        .analyze(&input.replace("Dialogue: 0,", "Dialogue: bad,"))
+        .is_err());
+    assert!(AssCodec
+        .analyze(&input.replace("[Aegisub Project Garbage]", "[Unknown Section]"))
+        .is_err());
+    assert!(AssCodec
+        .analyze(&input.replace("[Events]", "[Evnts]"))
+        .is_err());
+}

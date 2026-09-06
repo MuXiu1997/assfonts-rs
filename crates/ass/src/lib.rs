@@ -4,7 +4,7 @@
 mod attachment;
 use ass_core::{analysis::events::parse_override_block, parser::ast::Section, Script};
 use assfonts_core::{Attachment, Error, FontRequest, FontUsage, Result, SubtitleCodec};
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 #[derive(Default)]
 pub struct AssCodec;
@@ -46,6 +46,43 @@ fn headers(text: &str) -> Result<()> {
         return Err(invalid("NUL in subtitle"));
     }
     Ok(())
+}
+
+// Editor metadata is not rendered. Hide only these known sections from the
+// syntax parser; keep the original bytes for embedding and all other diagnostics.
+// Comment out each line in place to retain diagnostic line/byte positions.
+fn analysis_text(text: &str) -> Cow<'_, str> {
+    let mut masked: Option<Vec<u8>> = None;
+    let mut metadata = false;
+    let mut offset = 0;
+    for line in text.split_inclusive('\n') {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') {
+            metadata = [
+                "[Aegisub Project Garbage]",
+                "[Aegisub Project]",
+                "[Aegisub Extradata]",
+            ]
+            .iter()
+            .any(|header| trimmed.eq_ignore_ascii_case(header));
+        }
+        if metadata && !trimmed.is_empty() {
+            let bytes = masked.get_or_insert_with(|| text.as_bytes().to_vec());
+            for byte in &mut bytes[offset..offset + line.len()] {
+                if !matches!(*byte, b'\r' | b'\n') {
+                    *byte = b' ';
+                }
+            }
+            bytes[offset] = b';';
+        }
+        offset += line.len();
+    }
+    match masked {
+        Some(bytes) => {
+            Cow::Owned(String::from_utf8(bytes).expect("whole lines replaced with ASCII"))
+        }
+        None => Cow::Borrowed(text),
+    }
 }
 
 fn ignored_tag(name: &str) -> bool {
@@ -127,7 +164,8 @@ impl SubtitleCodec for AssCodec {
     fn analyze(&self, subtitle: &str) -> Result<FontUsage> {
         headers(subtitle)?;
         let text = subtitle.trim_start_matches('\u{feff}');
-        let script = Script::parse(text).map_err(|e| invalid(e.to_string()))?;
+        let parser_text = analysis_text(text);
+        let script = Script::parse(&parser_text).map_err(|e| invalid(e.to_string()))?;
         if !script.issues().is_empty() {
             return Err(invalid(format!(
                 "parser diagnostics: {:?}",
