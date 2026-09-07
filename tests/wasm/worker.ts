@@ -1,4 +1,5 @@
 import { loadModule, MemoryEngine } from './abi.ts'
+import { makeLegacyFont } from './legacy-font.ts'
 
 const scope = globalThis as unknown as {
   onmessage: (event: MessageEvent<{ fonts: string; output: string }>) => void
@@ -81,11 +82,38 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
       await Deno.writeTextFile(`${output}/${name}`, prefix + '[Fonts]\nfontname: ' + entry.trim() + '\n\n[Events]' + events)
     }
     await Deno.writeTextFile(`${output}/processing.json`, JSON.stringify(result.report, null, 2) + '\n')
+    const legacy = new MemoryEngine(module)
+    try {
+      const source = makeLegacyFont(await Deno.readFile(new URL('../../vendor/harfbuzz/test/api/fonts/Roboto-Regular.abc.ttf', import.meta.url)))
+      const sourceHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', source)), b => b.toString(16).padStart(2, '0')).join('')
+      legacy.addFont('legacy-prc.ttf', source)
+      const template = await Deno.readTextFile(new URL('../../examples/basic.ass', import.meta.url))
+      const legacyAss = template.replaceAll('Open Sans', 'Roboto').replace(/^Dialogue:.*$/gm, '').trim() +
+        '\nDialogue: 0,0:00:00.00,0:00:03.00,Default,,0,0,0,,A中「」€\uE7C7\uF8F5\n'
+      const input = new TextEncoder().encode(legacyAss)
+      const prepared = legacy.process(input)
+      require(prepared.report.missing_glyph_policy === 'warn' && prepared.report.warnings.length === 0, 'PRC glyph coverage was not recognized')
+      require(prepared.report.fonts[0].source_sha256 === sourceHash && prepared.report.fonts[0].source_bytes === source.length, 'PRC normalization changed source identity')
+      // Independently checked against the native CLI using this exact fixture.
+      require(sourceHash === 'eafb6196d0627c7fc4e9c93348f9234253f311ee01013bbb7dae8442be38b8c5', 'PRC fixture changed')
+      require(prepared.report.fonts[0].subset_sha256 === 'f0d3deded86ec3d91fe8803db821eb9de7e469bc6f948fc337db6b98ace2cbe6', 'PRC subset differs from native baseline')
+      const missingInput = new TextEncoder().encode(legacyAss.replace('A中', 'A中丂\u0378\u1e3f'))
+      const warned = legacy.process(missingInput)
+      require(warned.report.warnings.length === 1, 'Expected PRC missing-glyph warning')
+      for (const ch of ['丂', '\u0378', '\u1e3f']) require(warned.report.warnings[0].characters.includes(ch), 'PRC invented coverage or used GB18030 reassignment')
+      legacy.setMissingGlyphPolicy('error')
+      expectError(() => legacy.process(missingInput), 'missing glyphs')
+      require(legacy.process(input).report.warnings.length === 0, 'Strict PRC coverage failed')
+      await Deno.writeFile(`${output}/legacy-prc.ttf`, source)
+      await Deno.writeFile(`${output}/legacy-input.ass`, input)
+      await Deno.writeTextFile(`${output}/legacy-input.assfonts.ass`, prepared.subtitle)
+      await Deno.writeTextFile(`${output}/legacy-processing.json`, JSON.stringify(prepared.report, null, 2) + '\n')
+    } finally { legacy.close() }
     active.close()
     expectError(() => active.process(input), 'closed')
     expectError(() => active.setMissingGlyphPolicy('warn'), 'closed')
     scope.postMessage({ ok: true, checks: ['UTF-8 rejection', 'missing-font rejection', 'malformed-font recovery',
-      'copied font data', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'default warn', 'explicit strict goldens', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'close'],
+      'copied font data', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'default warn', 'explicit strict goldens', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'legacy CP936 format 2', 'legacy source identity', 'legacy error/warn', 'close'],
       memory_bytes: module.HEAPU8.length, deno: Deno.version.deno })
   } catch (error) {
     scope.postMessage({ ok: false, error: String(error) })

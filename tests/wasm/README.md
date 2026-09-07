@@ -31,6 +31,10 @@ CFF、正文原样保留、重复处理、关闭后拒绝。还强制一次 memo
 另验证新引擎和宿主适配器的默认 warn 与显式 warn 一致；历史 TTC/CFF golden 测试显式选择 error，不更新哈希来掩盖默认值变化。还验证缺字 warning、非法策略值拒绝、恢复严格模式后重新拒绝缺字及原输出
 哈希不变。warning 模式的固定默认字体环境约束见 [缺字策略](../../docs/missing-glyph-policy.md)。
 
+合成 PRC format-2 字体另验证 CP936 映射、原输入身份、默认 warn/显式 error 与错误后恢复；
+源字体与子集 SHA-256 均对照独立原生基准，覆盖同一 glyph 的多个 Unicode 别名及不可编码字符。
+支持范围和真实样本回归见 [旧编码支持](../../docs/legacy-cmap.md)。
+
 ## 独立渲染
 
 按 [渲染测试说明](../render/README.md) 安装测试用的 FreeType、HarfBuzz、FriBidi，
