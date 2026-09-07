@@ -33,7 +33,7 @@ fn matches_aliases_deduplicates_bytes_and_reports_missing_glyphs() {
 }
 
 #[test]
-fn equal_ranked_different_fonts_are_not_chosen_arbitrarily() {
+fn equal_ranked_fonts_follow_explicit_catalog_order_like_libass() {
     let mut catalog = FontCatalog::default();
     catalog.add("first", FONT).unwrap();
     // Trailing bytes do not change SFNT tables; simulate a distinct file version.
@@ -45,9 +45,49 @@ fn equal_ranked_different_fonts_are_not_chosen_arbitrarily() {
         weight: 400,
         italic: false,
     };
+    assert_eq!(
+        catalog.resolve(&request, &['a'].into()).unwrap().source,
+        "first"
+    );
+    let mut reversed = FontCatalog::default();
+    let mut another = FONT.to_vec();
+    another.push(0);
+    reversed.add("second", another).unwrap();
+    reversed.add("first", FONT).unwrap();
+    assert_eq!(
+        reversed.resolve(&request, &['a'].into()).unwrap().source,
+        "second"
+    );
+}
+
+#[test]
+fn ties_between_different_coverage_do_not_silently_enable_glyph_fallback() {
+    const AC: &[u8] =
+        include_bytes!("../../../vendor/harfbuzz/test/api/fonts/Roboto-Regular.ac.ttf");
+    const ABC: &[u8] =
+        include_bytes!("../../../vendor/harfbuzz/test/api/fonts/Roboto-Regular.abc.ttf");
+    let mut catalog = FontCatalog::default();
+    catalog.add("z-first-ac", AC).unwrap();
+    catalog.add("a-later-abc", ABC).unwrap();
+    let request = FontRequest {
+        family: "Roboto".into(),
+        weight: 400,
+        italic: false,
+    };
+    assert_eq!(
+        catalog.resolve(&request, &['a'].into()).unwrap().source,
+        "z-first-ac"
+    );
     assert!(catalog
-        .resolve(&request, &['a'].into())
+        .resolve(&request, &['b'].into())
         .unwrap_err()
         .to_string()
-        .contains("ambiguous"));
+        .contains("missing glyphs"));
+    let mut reversed = FontCatalog::default();
+    reversed.add("a-later-abc", ABC).unwrap();
+    reversed.add("z-first-ac", AC).unwrap();
+    assert_eq!(
+        reversed.resolve(&request, &['b'].into()).unwrap().source,
+        "a-later-abc"
+    );
 }

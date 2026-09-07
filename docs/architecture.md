@@ -11,7 +11,7 @@
 三个 trait 均为 `Send + Sync`、支持 trait object：
 
 - `SubtitleCodec`：从原始文本得到每种 `FontRequest` 的 Unicode 集合，并完成附件插入。无法分析的语法必须报错。默认 ASS adapter 保留原文，避免解析器序列化改变时间轴或样式。
-- `FontResolver`：接收名称/字重/斜体与字符集合，返回明确的源字节和 face index。必须检查字符覆盖，对缺字与歧义报错。默认 resolver 不静默选用另一个字体来补字。
+- `FontResolver`：接收名称/字重/斜体与字符集合，返回明确的源字节和 face index。必须检查字符覆盖并记录确定性的同分策略。默认 resolver 同分时先载入优先，但缺字仍报错，不静默选用另一个字体来补字。
 - `Subsetter`：接收一个 face 与合并后的字符集合，返回独立 SFNT。必须保留渲染所需的名称、布局依赖和覆盖。默认 HarfBuzz adapter 在子集化前后验证覆盖。
 
 `Processor` 借用这些实现，不取得其所有权。更换 resolver 时可自行实现字体缓存、数据库或延迟加载；更换 subsetter 不影响 ASS 状态跟踪与文件输出。
@@ -36,7 +36,7 @@ HarfBuzz 通过 Git 子模块固定 commit，`build.rs` 编译其 amalgamation `
 ## 默认策略
 
 - 名称：case-insensitive 匹配 legacy family、full name、PostScript name、typographic/WWS family；名称来源限定为可解码的字体 name 记录。
-- 匹配：斜体不匹配惩罚高于字重差，同分不同源拒绝。相同文件字节去重。
+- 匹配：斜体不匹配惩罚高于字重差，同分采用 libass 的先载入优先规则，再按 collection face 顺序；相同文件字节去重。这里只对齐同分处理，评分及名称匹配尚不等同于 libass 的完整实现。调用方需固定字体添加顺序；CLI 按规范化路径排序。
 - 字符：普通可见字符必须有非 `.notdef` cmap 映射；Unicode default-ignorable 字符保留在子集输入中，但不强制有独立 cmap glyph。
 - 输出：使用子集内容哈希生成 ASCII 附件名；不修改字体内部名称。相同 face 的多个名称/样式需求合并。
 - 报告：schema version 为 1；每个字体记录所有请求、源文件哈希、face index、字符集合与子集哈希。

@@ -23,6 +23,8 @@ pub struct FontCatalog {
 impl FontCatalog {
     /// Adds all faces of a TTF/OTF/TTC/OTC. Byte-identical sources are deduplicated.
     /// Parsing is transactional: a malformed collection contributes no faces.
+    /// Equal-ranked faces use first-added order, then collection face order.
+    /// Callers must keep this order stable and aligned with their render oracle.
     pub fn add(&mut self, source: impl Into<String>, bytes: impl Into<Arc<[u8]>>) -> Result<()> {
         let source = source.into();
         let data = bytes.into();
@@ -129,24 +131,10 @@ impl FontResolver for FontCatalog {
             })
             .collect();
         ranked.sort_unstable();
-        let (score, index) = ranked[0];
-        if ranked.get(1).is_some_and(|x| x.0 == score) {
-            let labels: Vec<_> = ranked
-                .iter()
-                .take_while(|x| x.0 == score)
-                .map(|x| {
-                    let f = &self.faces[x.1].face;
-                    format!("{} face {}", f.source, f.index)
-                })
-                .collect();
-            return Err(Error::Font(format!(
-                "ambiguous {:?} weight {} italic {}: {}",
-                request.family,
-                request.weight,
-                request.italic,
-                labels.join("; ")
-            )));
-        }
+        // libass keeps the first registered candidate when scores tie. Index
+        // is catalog insertion order (then TTC face order), not a path/hash
+        // preference or an assumption that equally named faces are identical.
+        let (_, index) = ranked[0];
         let face = &self.faces[index].face;
         verify_coverage(&face.data, face.index, characters).map_err(|e| {
             Error::Font(format!(

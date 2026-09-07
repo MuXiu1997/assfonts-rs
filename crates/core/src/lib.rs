@@ -50,7 +50,8 @@ pub trait SubtitleCodec: Send + Sync {
     fn embed(&self, subtitle: &str, fonts: &[Attachment]) -> Result<String>;
 }
 
-/// Match a face and verify coverage. Missing/ambiguous matches must be errors.
+/// Match a face and verify coverage. Missing matches/coverage must be errors.
+/// Resolvers must document a deterministic policy for equal-ranked candidates.
 pub trait FontResolver: Send + Sync {
     fn resolve(&self, request: &FontRequest, characters: &BTreeSet<char>) -> Result<FontFace>;
 }
