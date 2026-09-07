@@ -35,6 +35,7 @@ WASM 新引擎及参考宿主 `MemoryEngine` 默认 warn，不自动配置宿主
 - 找不到请求字体、字体损坏、子集化失败和不支持的字幕语法仍然是错误。
 - 只有旧编码 cmap（如 GBK/Big5）或没有 Unicode cmap 的字体仍报错；libass
   可能转码后取到字形，不能将这种情况当作普通缺字降级，否则会改变显示。
+  GBK 的原因与独立修复计划见 [后续事项](known-issues/legacy-gbk-cmap.md)。
 - 严格模式保持原有子集 flags 与附件排序，避免改变既有输出。
 
 ## 宿主的责任
