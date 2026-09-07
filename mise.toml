@@ -67,10 +67,13 @@ run = "sh tests/render/build_oracle.sh"
 
 [tasks."test:wasm"]
 description = "Verify the built WASM artifact in Deno, including RGBA controls"
-run = "python scripts/run_wasm_validation.py"
+run = [
+  "deno check tests/wasm/verify.ts tests/wasm/worker.ts",
+  "python scripts/run_wasm_validation.py",
+]
 
 [tasks."sync-toolchains"]
-description = "Regenerate JSON tool versions consumed by standalone builds and existing CI"
+description = "Regenerate JSON tool versions consumed by standalone builds"
 run = "python scripts/sync_toolchains.py"
 
 [tasks."check:toolchains"]

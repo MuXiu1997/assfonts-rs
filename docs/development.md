@@ -1,7 +1,7 @@
 # mise 开发入口
 
-工具版本、任务环境和开发命令统一定义在仓库根目录的 `mise.toml`。本轮只接入
-项目任务；现有 `.github/workflows/` 没有迁移，GitHub Actions 集成另行处理。
+工具版本、任务环境和开发命令统一定义在仓库根目录的 `mise.toml`。
+本地开发与 GitHub Actions 直接复用同一组 `mise run` 任务。
 
 ## 开始使用
 
@@ -36,7 +36,7 @@ Cargo backend 安装 cargo-zigbuild，Zig 单独管理，不额外安装 Python 
 | `mise run setup:renderer` | 构建独立 libass 渲染器，需要系统开发库 |
 | `mise run test:wasm` | 对已有 WASM 执行 Deno 和 RGBA/负对照验证 |
 | `mise run test:linux` | 仅 Linux：对已有 ELF 执行静态检查和渲染验证 |
-| `mise run sync-toolchains` | 从 mise 版本配置刷新独立脚本/旧 CI 使用的 JSON 视图 |
+| `mise run sync-toolchains` | 从 mise 版本配置刷新独立脚本使用的 JSON 视图 |
 
 构建任务与验证任务分开，保证验证和后续打包可以使用同一份产物。渲染任务每轮创建
 新的 `.validation/mise-*` 目录，不覆盖旧报告；缺少产物、字体或渲染器时会明确提示
@@ -65,3 +65,17 @@ mise run test:wasm
   提交 `mise.lock` 中工具后端提供的解析版本、下载地址和校验信息；它不保证锁定
   Cargo backend 的全部编译依赖或操作系统包。不要手改锁文件，用 `mise lock` 更新。
   不提交 SDK、工具安装目录、缓存、个人路径或生成的字体/二进制。
+
+## GitHub Actions
+
+两个工作流使用固定 commit 的 `jdx/mise-action` v4，明确安装 mise 2026.8.15，
+以 `--locked` 安装仓库工具。升级 action 或 mise 本身时需要同步更新三个 job 的
+配置；工具版本升级仍从 `mise.toml` 和 `mise.lock` 开始。
+
+macOS/Windows 执行 `check`、原生测试和构建，随后检查链接依赖；Linux 执行 musl
+构建、静态产物检查和 RGBA 验证；WASM 执行固定 revision 的 SDK 准备、构建、
+Deno 隔离验证及 RGBA/负对照。系统开发库安装、打包和上传保留在工作流中，验证后
+直接打包同一份产物，不再重建。失败时也上传已有的 `.validation/mise-*` 报告。
+
+工具缓存使用 action 默认的系统、配置和版本相关键；缓存只加速安装，不替代锁文件，
+命中缓存后仍执行安装检查。Emsdk 继续由 `setup:wasm` 校验和安装。
