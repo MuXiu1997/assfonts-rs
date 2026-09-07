@@ -1,0 +1,24 @@
+min_version = "2026.8.15"
+
+# Tool versions are authoritative here; sync-toolchains checks the legacy JSON views.
+[tools]
+rust = [
+  { version = "1.92.0", profile = "minimal", components = ["rustfmt", "clippy"], targets = ["x86_64-unknown-linux-musl"] },
+  { version = "nightly-2025-12-17", profile = "minimal", components = ["rust-src"] },
+]
+python = "3.12.12"
+uv = "0.10.7"
+deno = "2.5.6"
+zig = "0.14.1"
+"cargo:cargo-zigbuild" = "0.23.4"
+actionlint = "1.7.7"
+
+[settings]
+lockfile = true
+
+[vars]
+emsdk_version = "4.0.23"
+
+[env]
+EMSDK = "{{ env.EMSDK | default(value=config_root ~ '/.validation/emsdk') }}"
+PYTHONPYCACHEPREFIX = "{{ config_root }}/.validation/pycache"
