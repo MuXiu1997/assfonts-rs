@@ -9,6 +9,7 @@ fn main() {
     );
     println!("cargo:rerun-if-changed={}", root.display());
     println!("cargo:rerun-if-changed=src/bridge.cc");
+    println!("cargo:rerun-if-changed=src/mort.hh");
     let mut build = cc::Build::new();
     build
         .cpp(true)

@@ -9,6 +9,8 @@
 template <typename T, void (*Destroy)(T*)>
 using owned = std::unique_ptr<T, decltype(Destroy)>;
 
+#include "mort.hh"
+
 // Shaping normalizes Unicode before glyph lookup. Keep source cmap entries for
 // canonical compositions/decompositions as well as the literal ASS characters.
 // This operates on font coverage only; the subtitle bytes are never normalized.
@@ -79,8 +81,21 @@ hb_blob_t* af_subset(const char* bytes, uint32_t length, uint32_t index,
         hb_set_invert(set);
         if (!hb_set_allocation_successful(set)) return nullptr;
     }
-    owned<hb_face_t, hb_face_destroy> subset(hb_subset_or_fail(face.get(),input.get()), hb_face_destroy);
+    af_mort::table mort;
+    if (!af_mort::read(face.get(), mort)) return nullptr;
+    owned<hb_subset_plan_t, hb_subset_plan_destroy> plan(nullptr, hb_subset_plan_destroy);
+    auto* glyphs = hb_subset_input_glyph_set(input.get());
+    do {
+        plan.reset(hb_subset_plan_create_or_fail(face.get(), input.get()));
+        if (!plan || !hb_set_allocation_successful(glyphs)) return nullptr;
+    } while (af_mort::close(mort, hb_subset_plan_old_to_new_glyph_mapping(plan.get()), glyphs));
+    owned<hb_face_t, hb_face_destroy> subset(hb_subset_plan_execute_or_fail(plan.get()), hb_face_destroy);
     if (!subset) return nullptr;
+    if (mort.present) {
+        af_mort::bytes table;
+        if (!af_mort::write(mort, hb_subset_plan_old_to_new_glyph_mapping(plan.get()), table)) return nullptr;
+        return af_mort::attach(subset.get(), table);
+    }
     hb_blob_t* output = hb_face_reference_blob(subset.get());
     if (!hb_blob_get_length(output)) {hb_blob_destroy(output); return nullptr;}
     return output;
