@@ -1,28 +1,29 @@
-# 待修复：只有 GBK cmap 的字体
+# 已实现：Microsoft PRC/CP936 format-2 cmap
 
-状态：独立后续事项。本次 warning 策略提交仅记录问题，未实现转码映射；
-legacy-only cmap 的拒绝保护继续生效。
+状态：已在 warning 策略之后的独立后续变更中实现，并完成目标样本的原生/WASM
+零差异验证。实现与范围见 [旧编码支持](../legacy-cmap.md)。只放行已支持的
+Microsoft PRC/CP936 format 2；其他 legacy-only cmap 的拒绝保护继续生效。
 
 ## 原因与复现证据
 
 真实语料 `s057-0001` 使用的长城粗圆体只有 Microsoft platform 3、encoding 3、
 format 2 的 GBK cmap，没有 Unicode cmap。libass 可先将 Unicode 转为 CP936
-编码，再从旧 cmap 获取 glyph；目前的 Unicode 子集路径不能直接复现该映射。
+编码，再从旧 cmap 获取 glyph；原先的 Unicode 子集路径不能直接复现该映射。
 这不是字体损坏，也不能当作通常的 Unicode cmap 缺字交给默认字体处理。
 
 最初直接放行缺字的实验产生 882 个差异帧，因而增加 Unicode cmap 前置检查。
-当前默认 warn 仍明确拒绝该样本，不输出替代字体或完整字体绕过错误。
+在原 warning 策略提交中，默认 warn 明确拒绝该样本，不输出替代字体或完整字体绕过错误。
 其余真实语料和实验环境见 [验证记录](../validation/2026-09-08-warning-policy.md)。
 
-## 候选修复方案
+## 采用的修复方案
 
 在内存中建立 Unicode → CP936 → 原 glyph ID 映射，并为子集流程提供等价的
-Unicode cmap，随后执行既有 glyph/layout 闭包和正常子集化。需要先验证
-FreeType/libass 实际映射规则、format 2 读取及多码点别名，不预先假定方案保真。
+Unicode cmap，随后执行既有 glyph/layout 闭包和正常子集化。已验证
+FreeType/libass 实际映射规则、format 2 读取及多码点别名，证据见旧编码支持文档。
 
-native 与 WASM 应共用可移植、确定性的编码映射，不依赖系统 iconv 或宿主编码库。
+native 与 WASM 共用可移植、确定性的编码映射，不依赖系统 iconv 或宿主编码库。
 不修改原始字体文件、ASS 字符或字体名称，不嵌入完整字体兜底。
-该方案尚未在本提交中实现或验证；也不代表 Big5、其他旧编码或缺失 cmap 已受支持。
+该方案已完成本页验收；不代表 Big5、其他旧编码或缺失 cmap 已受支持。
 
 ## 验收条件
 

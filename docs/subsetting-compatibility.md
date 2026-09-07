@@ -8,6 +8,10 @@
 
 同一源 face 的请求合并。error 模式要求实际字符由选定 face 覆盖；默认 warn 保留同名候选、缺字 warning 和 .notdef 轮廓，但仍验证源字体已有的所需字形。可选默认集合只取源字体已有的 U+0020–U+00FF、U+FF01–U+FF5E、U+3000，缺少可选字符不算错误。它覆盖常见大小写拉丁字母、数字、空格、符号及全角 ASCII，不扩展整段 CJK，也不修改字幕文字。继续保留规范组合/分解闭包、GSUB/组件闭包和 hinting。
 
+## 旧式 CP936 cmap
+
+没有 Unicode cmap、首选 Microsoft cmap 为 PRC format 2 的字体，通过固定 CP936 可逆映射在内存中补充 Unicode cmap 后进入同一子集管线。映射阶段保持原 glyph ID、轮廓、度量和布局表，源文件不变；其他旧编码/格式仍拒绝。原生与 WASM 共用纯 Rust 实现，细节及零差异回归见 [旧编码支持](legacy-cmap.md)。
+
 ## 旧式 AAT mort
 
 EPSON 与 DFHanziPenW3-A 的实测差异来自源字体同时含有 `mort` 与 `GSUB`。HarfBuzz 默认子集丢掉 `mort`，使布局选择转至不同的 GSUB 路径；仅保存轮廓和水平度量不足以保真。即使 mort 只含竖排规则，删除整个表也可能影响横排路径选择。

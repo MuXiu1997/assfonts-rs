@@ -33,8 +33,9 @@ WASM 新引擎及参考宿主 `MemoryEngine` 默认 warn，不自动配置宿主
 - 保留 `.notdef` 轮廓、字体名称及既有布局兼容策略；不替换字幕字符、字体名，
   不把原字体整份嵌入来回避子集错误。
 - 找不到请求字体、字体损坏、子集化失败和不支持的字幕语法仍然是错误。
-- 只有旧编码 cmap（如 GBK/Big5）或没有 Unicode cmap 的字体仍报错；libass
-  可能转码后取到字形，不能将这种情况当作普通缺字降级，否则会改变显示。
+- 只有 Microsoft PRC/CP936 format-2 cmap 的字体现在先在内存中补充等价的
+  Unicode cmap，再正常子集化；其他不支持的旧编码或缺失 cmap 仍报错，
+  不将无法解析的映射当作普通缺字降级。详见 [旧编码支持](legacy-cmap.md)。
   GBK 的原因与独立修复计划见 [后续事项](known-issues/legacy-gbk-cmap.md)。
 - 严格模式保持原有子集 flags 与附件排序，避免改变既有输出。
 
