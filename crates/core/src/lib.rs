@@ -32,8 +32,8 @@ pub type FontUsage = BTreeMap<FontRequest, BTreeSet<char>>;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MissingGlyphPolicy {
-    #[default]
     Error,
+    #[default]
     Warn,
 }
 
@@ -171,8 +171,10 @@ pub struct Processor<'a> {
 }
 
 impl Processor<'_> {
+    /// Process with warnings by default; the host must keep its rendering and
+    /// default-font environment fixed. Use `process_with_policy` for strict errors.
     pub fn process(&self, subtitle: &str) -> Result<Processed> {
-        self.process_with_policy(subtitle, MissingGlyphPolicy::Error)
+        self.process_with_policy(subtitle, MissingGlyphPolicy::default())
     }
 
     pub fn process_with_policy(

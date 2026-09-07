@@ -15,6 +15,7 @@ type Module = {
 export class MemoryEngine {
   private engine: number
   constructor(readonly module: Module) {
+    // Inherit the core default (warn); callers can explicitly select error.
     this.engine = module._af_engine_new()
     if (!this.engine) throw new Error('Engine allocation failed')
   }

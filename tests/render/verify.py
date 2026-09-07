@@ -33,6 +33,7 @@ def main():
         str(args.binary.resolve()), "-i", str(directory / "input.ass"),
         "-f", str(args.ttc.resolve()), "-f", str(args.otf.resolve()),
         "-o", str(directory), "--report", str(directory / "processing.json"),
+        "--missing-glyphs", "error",  # Keep this strict TTC/CFF regression explicit.
     ], check=True)
     reports = json.loads((directory / "processing.json").read_text(encoding="utf-8"))["files"][0]["fonts"]
     require(len(reports) == 2, reports)

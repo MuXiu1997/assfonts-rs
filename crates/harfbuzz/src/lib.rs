@@ -53,8 +53,9 @@ impl Subsetter for HarfBuzz {
     fn name(&self) -> &str {
         &self.name
     }
+    /// Uses the shared default policy (warn). Select Error explicitly for strict coverage.
     fn subset(&self, face: &FontFace, characters: &BTreeSet<char>) -> Result<Vec<u8>> {
-        self.subset_with_policy(face, characters, MissingGlyphPolicy::Error)
+        self.subset_with_policy(face, characters, MissingGlyphPolicy::default())
     }
     fn subset_with_policy(
         &self,

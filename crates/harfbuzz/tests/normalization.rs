@@ -60,7 +60,9 @@ fn warning_keeps_decomposition_even_when_literal_character_has_no_cmap_entry() {
     };
     let requested = ['á'].into();
     let hb = HarfBuzz::default();
-    assert!(hb.subset(&face, &requested).is_err());
+    assert!(hb
+        .subset_with_policy(&face, &requested, MissingGlyphPolicy::Error)
+        .is_err());
     let output = hb
         .subset_with_policy(&face, &requested, MissingGlyphPolicy::Warn)
         .unwrap();

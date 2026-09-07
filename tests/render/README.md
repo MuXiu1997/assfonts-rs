@@ -2,6 +2,9 @@
 
 此测试不链接进 CLI。普通 `cargo test` 不需要 libass，也不需要本机商业字体。
 
+`verify.py` 显式选择 `--missing-glyphs error`，保留既有严格模式 TTC/CFF 回归。
+默认 warn 的宿主环境约束与验证另见 [缺字策略](../../docs/missing-glyph-policy.md)。
+
 真实字幕的三组对照方案及已有结果见 [渲染回归设计](../../docs/render-validation.md)。这里的 CI 样例使用真实开源字体和人工编写的四秒字幕，不等同于已有 43 个真实字幕的完整批次。
 
 ## CI 开源字体回归

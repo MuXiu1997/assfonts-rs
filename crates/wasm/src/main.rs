@@ -51,7 +51,7 @@ pub extern "C" fn af_engine_new() -> *mut std::ffi::c_void {
         catalog: FontCatalog::default(),
         backend: HarfBuzz::default(),
         output: Vec::new(),
-        missing_glyph_policy: MissingGlyphPolicy::Error,
+        missing_glyph_policy: MissingGlyphPolicy::default(),
     }))
     .cast()
 }
@@ -129,7 +129,7 @@ pub unsafe extern "C" fn af_process(
     }
 }
 
-/// Selects strict errors (0, default) or missing-cmap warnings (1).
+/// Selects strict errors (0) or missing-cmap warnings (1, default).
 /// Invalid values leave the policy unchanged. Warn requires a fixed external
 /// renderer/default-font environment; it does not supply a fallback font.
 ///
@@ -184,7 +184,7 @@ mod tests {
         unsafe {
             assert_eq!(
                 (*engine.cast::<Engine>()).missing_glyph_policy,
-                MissingGlyphPolicy::Error
+                MissingGlyphPolicy::Warn
             );
             assert_eq!(af_set_missing_glyph_policy(engine, 1), 1);
             assert_eq!(af_set_missing_glyph_policy(engine, u32::MAX), 0);
@@ -193,6 +193,11 @@ mod tests {
                 MissingGlyphPolicy::Warn
             );
             assert_eq!(af_set_missing_glyph_policy(engine, 0), 1);
+            assert_eq!(
+                (*engine.cast::<Engine>()).missing_glyph_policy,
+                MissingGlyphPolicy::Error
+            );
+            assert_eq!(af_set_missing_glyph_policy(engine, u32::MAX), 0);
             assert_eq!(
                 (*engine.cast::<Engine>()).missing_glyph_policy,
                 MissingGlyphPolicy::Error
@@ -246,6 +251,7 @@ mod tests {
             );
             assert_eq!(restored.as_bytes(), subtitle);
             assert_eq!(response["report"]["fonts"].as_array().unwrap().len(), 1);
+            assert_eq!(response["report"]["missing_glyph_policy"], "warn");
             af_engine_destroy(engine);
         }
     }

@@ -60,7 +60,7 @@ fn plugins_work_without_native_dependencies_and_union_face_usage() {
         resolver: &Resolver,
         subsetter: &backend,
     }
-    .process("input")
+    .process_with_policy("input", MissingGlyphPolicy::Error)
     .unwrap();
     assert_eq!(*backend.0.lock().unwrap(), vec![['A', 'B'].into()]);
     assert_eq!(result.subtitle, "input:1");
@@ -94,7 +94,7 @@ fn an_empty_character_set_is_still_a_font_dependency() {
         resolver: &Resolver,
         subsetter: &backend,
     }
-    .process("input")
+    .process_with_policy("input", MissingGlyphPolicy::Error)
     .unwrap();
     assert_eq!(result.attachments.len(), 1);
     assert_eq!(*backend.0.lock().unwrap(), vec![BTreeSet::new()]);
@@ -102,6 +102,7 @@ fn an_empty_character_set_is_still_a_font_dependency() {
 
 #[test]
 fn warning_plan_order_survives_grouping_and_unimplemented_plugins_reject() {
+    assert_eq!(MissingGlyphPolicy::default(), MissingGlyphPolicy::Warn);
     let backend = Backend::default();
     let processor = Processor {
         codec: &Codec,
@@ -166,7 +167,7 @@ fn warning_plan_order_survives_grouping_and_unimplemented_plugins_reject() {
         resolver: &Planned,
         subsetter: &WarnBackend,
     }
-    .process_with_policy("input", MissingGlyphPolicy::Warn)
+    .process("input")
     .unwrap();
     assert_eq!(
         result
@@ -179,4 +180,5 @@ fn warning_plan_order_survives_grouping_and_unimplemented_plugins_reject() {
     );
     assert_eq!(result.report.fonts[0].characters, "AC");
     assert_eq!(result.attachments.len(), 2);
+    assert_eq!(result.report.missing_glyph_policy, MissingGlyphPolicy::Warn);
 }

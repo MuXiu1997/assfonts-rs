@@ -32,6 +32,15 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     // The catalog must own its copy after the host input allocation is released.
     ttc.fill(0)
     active.addFont('NotoSansSC-Regular.otf', await Deno.readFile(`${fonts}/NotoSansSC-Regular.otf`))
+    const original = new TextDecoder('utf-8', { fatal: true }).decode(input)
+    const missingInput = new TextEncoder().encode(original.replace(/(Dialogue:[^\n]*)/, '$1\u0378'))
+    const defaultWarning = active.process(missingInput)
+    require(defaultWarning.report.missing_glyph_policy === 'warn' && defaultWarning.report.warnings.length > 0, 'New engine did not default to warn')
+    require(defaultWarning.report.fonts.length === 3, 'Default warning lost same-name TTC candidates')
+    active.setMissingGlyphPolicy('warn')
+    require(active.process(missingInput).subtitle === defaultWarning.subtitle, 'Default and explicit warn differ')
+    // Historical TTC/CFF goldens intentionally remain strict.
+    active.setMissingGlyphPolicy('error')
     const result = active.process(input)
     require(result.report.fonts.length === 2, 'Expected TTC and CFF subsets')
     const ttcReport = result.report.fonts.find((f: { source: string }) => f.source === 'NotoSans.ttc')
@@ -45,7 +54,6 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     const text: string = result.subtitle
     const [prefix, rest] = text.split('[Fonts]\n')
     const [attachments, events] = rest.split('[Events]')
-    const original = new TextDecoder('utf-8', { fatal: true }).decode(input)
     require(prefix + '[Events]' + events === original, 'Subtitle content changed')
     // Force growth and re-process: an adapter retaining a stale HEAPU8 fails here.
     const previousBytes = module.HEAPU8.length
@@ -53,7 +61,6 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     require(scratch !== 0 && module.HEAPU8.length > previousBytes, 'Memory did not grow')
     module._af_free(scratch, previousBytes)
     require(active.process(input).subtitle === text, 'Repeated processing changed output')
-    const missingInput = new TextEncoder().encode(original.replace(/(Dialogue:[^\n]*)/, '$1\u0378'))
     expectError(() => active.process(missingInput), 'missing glyphs')
     active.setMissingGlyphPolicy('warn')
     const warned = active.process(missingInput)
@@ -78,7 +85,7 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     expectError(() => active.process(input), 'closed')
     expectError(() => active.setMissingGlyphPolicy('warn'), 'closed')
     scope.postMessage({ ok: true, checks: ['UTF-8 rejection', 'missing-font rejection', 'malformed-font recovery',
-      'copied font data', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'close'],
+      'copied font data', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'default warn', 'explicit strict goldens', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'close'],
       memory_bytes: module.HEAPU8.length, deno: Deno.version.deno })
   } catch (error) {
     scope.postMessage({ ok: false, error: String(error) })

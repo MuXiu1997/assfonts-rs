@@ -6,7 +6,7 @@ UTF-8 ASS 由调用者传入，返回 JSON。原生 CLI 仍是 workspace 默认�
 
 调用顺序：
 
-默认严格拒绝缺字。可用 `af_set_missing_glyph_policy(engine, 1)` 显式开启 warning，
+新引擎默认 warning（`warn`），不自动加载默认字体。可用 `af_set_missing_glyph_policy(engine, 1)` 显式选择 warning，
 `0` 恢复严格模式；非法值报错且不改变策略。调用后读取的响应会替换前一次结果。
 warning 不加载默认字体，宿主环境约束见 [缺字策略](../../docs/missing-glyph-policy.md)。
 

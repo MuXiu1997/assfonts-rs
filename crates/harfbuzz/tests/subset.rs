@@ -1,10 +1,9 @@
-use assfonts_core::{FontFace, Subsetter};
+use assfonts_core::{FontFace, MissingGlyphPolicy, Subsetter};
 use assfonts_harfbuzz::HarfBuzz;
 use std::{collections::BTreeSet, sync::Arc};
 
 #[test]
 fn warning_keeps_covered_glyphs_and_notdef_outline() {
-    use assfonts_core::MissingGlyphPolicy;
     let face = FontFace {
         source: "Open Sans".into(),
         data: Arc::from(
@@ -14,10 +13,13 @@ fn warning_keeps_covered_glyphs_and_notdef_outline() {
     };
     let chars = ['a', '\u{378}'].into();
     let hb = HarfBuzz::default();
-    assert!(hb.subset(&face, &chars).is_err());
+    assert!(hb
+        .subset_with_policy(&face, &chars, MissingGlyphPolicy::Error)
+        .is_err());
     let output = hb
         .subset_with_policy(&face, &chars, MissingGlyphPolicy::Warn)
         .unwrap();
+    assert_eq!(hb.subset(&face, &chars).unwrap(), output);
     let parsed = ttf_parser::Face::parse(&output, 0).unwrap();
     let original = ttf_parser::Face::parse(&face.data, 0).unwrap();
     assert!(parsed.glyph_index('a').is_some());
@@ -82,7 +84,7 @@ fn subsets_glyf_and_cff_and_rejects_invalid_inputs() {
             )
             .is_err());
         assert!(HarfBuzz::default()
-            .subset(&face, &['\u{10ffff}'].into())
+            .subset_with_policy(&face, &['\u{10ffff}'].into(), MissingGlyphPolicy::Error)
             .is_err());
     }
     assert!(HarfBuzz::default()

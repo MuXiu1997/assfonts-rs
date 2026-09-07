@@ -1,17 +1,28 @@
 # 缺字策略与固定默认字体环境
 
-默认 `error` 保持原有行为：匹配不到字体或选中的字体缺少所需 cmap 字形就报错。
-`warn` 是显式选择的保真策略，不是补字或自动修复：源字幕在固定渲染环境中如何
-回退，子集字幕就应在相同环境中保持该显示，包括环境本身也缺字的情况。
+默认 `warn`：保留请求名称对应的候选和缺字 warning。这是固定环境下保留原显示的策略，不是自动补字，也不自动加载默认字体。找不到请求字体、无效输入和子集失败仍报错。
+显式 `error` 恢复严格缺字检查。
 
 ```sh
-assfonts-rs -i input.ass -f fonts -o output --missing-glyphs warn --json
+# 默认 warn；也可显式添加 --missing-glyphs warn
+assfonts-rs -i input.ass -f fonts -o output --json
+# 严格模式；--check 同样接受此选项
+assfonts-rs -i input.ass -f fonts --check --missing-glyphs error --json
 ```
 
-`--check` 同样支持该选项，但只检查和返回 warning，不验证最终渲染。
-Rust 使用 `Processor::process_with_policy(text, MissingGlyphPolicy::Warn)`。
-WASM 新引擎默认严格模式；`af_set_missing_glyph_policy(engine, 1)` 开启 warning，
-`0` 恢复严格模式。其他值返回错误且不修改策略；该调用会替换上一次 JSON 响应。
+`--check` 只规划并返回 warning，不验证最终渲染。
+Rust 的 `MissingGlyphPolicy::default()`、`Processor::process(text)` 和内置
+`HarfBuzz::subset` 均使用 warn；严格调用使用
+`Processor::process_with_policy(text, MissingGlyphPolicy::Error)` 或
+`Subsetter::subset_with_policy(face, chars, MissingGlyphPolicy::Error)`。
+低层 `FontResolver::resolve` 仍是严格单 face 原语；默认处理走支持策略的 `plan`。
+自定义 resolver/subsetter 若没有实现 warn 支持，会明确返回不支持；可显式选择 error，
+不会静默降级。直接调用 subset 不返回结构化 warning；需要报告时使用 Processor。
+
+WASM 新引擎及参考宿主 `MemoryEngine` 默认 warn，不自动配置宿主字体。
+`af_set_missing_glyph_policy(engine, 0)` / `engine.setMissingGlyphPolicy('error')`
+选择严格模式，`1` / `'warn'` 恢复 warning。非法值不改变策略；C ABI 调用会替换
+上一条 JSON 响应。严格 TTC/CFF golden 测试显式选 error，哈希保持原值。
 
 ## 实现约束
 

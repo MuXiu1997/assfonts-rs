@@ -39,8 +39,8 @@ struct Args {
     /// Compiled subsetter backend
     #[arg(long, default_value = "harfbuzz")]
     backend: String,
-    /// Missing cmap glyphs: warn requires an identical external renderer/default-font environment
-    #[arg(long, default_value = "error", value_parser = ["error", "warn"])]
+    /// Missing cmap glyphs: warn needs the same host fonts/configuration; error rejects missing glyphs
+    #[arg(long, default_value = "warn", value_parser = ["error", "warn"])]
     missing_glyphs: String,
     /// List compiled backends and exit
     #[arg(long)]
