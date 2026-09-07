@@ -22,3 +22,61 @@ emsdk_version = "4.0.23"
 [env]
 EMSDK = "{{ env.EMSDK | default(value=config_root ~ '/.validation/emsdk') }}"
 PYTHONPYCACHEPREFIX = "{{ config_root }}/.validation/pycache"
+
+[tasks."build:native"]
+description = "Build the native CLI"
+run = "cargo build --release --locked"
+
+[tasks."build:linux"]
+description = "Build the pinned Linux musl release"
+depends = ["check:toolchains"]
+run = "python scripts/build_linux.py"
+
+[tasks."setup:wasm"]
+description = "Install and activate the revision-pinned Emsdk"
+depends = ["check:toolchains"]
+run = "python scripts/setup_wasm.py"
+
+[tasks."build:wasm"]
+description = "Build the experimental WASM module"
+depends = ["check:toolchains"]
+run = "python scripts/build_wasm.py"
+
+[tasks."test:native"]
+description = "Run native Rust tests"
+run = "cargo test --workspace --locked"
+
+[tasks."check"]
+description = "Check formatting, lints, optional backend, workflows and WASM host types"
+run = [
+  "python scripts/sync_toolchains.py --check",
+  "cargo fmt --all -- --check",
+  "cargo clippy --workspace --all-targets --locked -- -D warnings",
+  "cargo check -p assfonts-cli --no-default-features --locked",
+  "actionlint -shellcheck= .github/workflows/ci.yml .github/workflows/wasm.yml",
+  "deno check tests/wasm/verify.ts tests/wasm/worker.ts",
+]
+
+[tasks."setup:fonts"]
+description = "Prepare checksum-pinned open fonts with isolated Python dependencies"
+run = "uv run --no-project --with-requirements tests/render/requirements.txt python tests/render/prepare_fonts.py --output .validation/ci-fonts"
+
+[tasks."setup:renderer"]
+description = "Build the independent renderer (requires system development libraries)"
+run = "sh tests/render/build_oracle.sh"
+
+[tasks."test:wasm"]
+description = "Verify the built WASM artifact in Deno, including RGBA controls"
+run = "python scripts/run_wasm_validation.py"
+
+[tasks."sync-toolchains"]
+description = "Regenerate JSON tool versions consumed by standalone builds and existing CI"
+run = "python scripts/sync_toolchains.py"
+
+[tasks."check:toolchains"]
+description = "Reject drift between mise versions and standalone build manifests"
+run = "python scripts/sync_toolchains.py --check"
+
+[tasks."test:linux"]
+description = "On Linux, inspect and render the existing musl release"
+run = "python scripts/run_linux_validation.py"

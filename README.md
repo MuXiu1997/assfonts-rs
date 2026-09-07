@@ -10,6 +10,10 @@
 
 ## 构建
 
+开发者可从 [mise 统一开发入口](docs/development.md) 开始：安装固定工具后使用
+`mise run check`、`mise run test:native`、`mise run build:linux` 或
+`mise run build:wasm`。下面的独立 Cargo/脚本命令仍可使用。
+
 需要 Rust 1.92+、Git 和 C++17 编译器。macOS 使用 Xcode Command Line Tools。无需 bindgen、libclang、pkg-config 或系统 HarfBuzz。
 
 ```sh

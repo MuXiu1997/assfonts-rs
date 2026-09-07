@@ -14,7 +14,7 @@ Apple Silicon 本次只有 `/usr/lib/libc++.1.dylib`、`/usr/lib/libiconv.2.dyli
 
 ## Linux musl（cargo-zigbuild 唯一发布入口）
 
-本机和 CI 都执行 `scripts/build_linux.py`，目标固定为 `x86_64-unknown-linux-musl`。版本来源为 `scripts/linux-toolchain.json`：Rust 1.92.0、cargo-zigbuild 0.23.4、Zig 0.14.1。脚本校验版本，不自动安装或升级工具。
+本机和 CI 都执行 `scripts/build_linux.py`，目标固定为 `x86_64-unknown-linux-musl`。工具版本集中在 `mise.toml`，`scripts/linux-toolchain.json` 是供独立脚本和现有 CI 使用的兼容视图：Rust 1.92.0、cargo-zigbuild 0.23.4、Zig 0.14.1。修改版本后运行 `mise run sync-toolchains`。构建脚本校验版本，不自动安装或升级工具。
 
 ```sh
 rustup toolchain install 1.92.0 --profile minimal --target x86_64-unknown-linux-musl
@@ -52,7 +52,7 @@ cc crate 会将 Rust 的静态 CRT 选择传给 C++ `/MT` 配置。发布验证�
 
 ## WASM（实验性 Emscripten 单模块）
 
-固定版本见 `scripts/wasm-toolchain.json`：Emsdk 4.0.23、Rust
+工具版本由 `mise.toml` 同步到 `scripts/wasm-toolchain.json`：Emsdk 4.0.23、Rust
 nightly-2025-12-17 和 `wasm32-unknown-emscripten`。HarfBuzz 仍使用同一子模块。
 构建入口支持本机 macOS 和 Linux，需要 Python 3、Bash、Git 与 rustup。
 
