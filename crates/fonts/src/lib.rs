@@ -1,6 +1,10 @@
 //! Font metadata and deterministic matching over caller-supplied bytes.
 #![forbid(unsafe_code)]
 
+mod cp936;
+mod legacy;
+pub use legacy::prepare_unicode_face;
+
 use assfonts_core::{
     sha256, Error, FontFace, FontPlan, FontRequest, FontResolver, FontUsage, FontWarning,
     MissingGlyphPolicy, PlannedFont, Result,
@@ -99,9 +103,15 @@ fn default_ignorable(c: char) -> bool {
 
 pub fn verify_coverage(bytes: &[u8], index: u32, characters: &BTreeSet<char>) -> Result<()> {
     let face = ttf_parser::Face::parse(bytes, index).map_err(|e| Error::Font(e.to_string()))?;
+    let legacy = legacy::PrcCmap::from_face(&face)?;
     let missing: Vec<_> = characters
         .iter()
-        .filter(|&&c| !default_ignorable(c) && face.glyph_index(c).is_none_or(|g| g.0 == 0))
+        .filter(|&&c| {
+            !default_ignorable(c)
+                && legacy
+                    .map_or_else(|| face.glyph_index(c), |map| map.glyph_index(c))
+                    .is_none_or(|g| g.0 == 0)
+        })
         .take(16)
         .map(|&c| format!("U+{:04X} ({c})", c as u32))
         .collect();
@@ -121,20 +131,18 @@ pub fn missing_characters(
     characters: &BTreeSet<char>,
 ) -> Result<BTreeSet<char>> {
     let face = ttf_parser::Face::parse(bytes, index).map_err(|e| Error::Font(e.to_string()))?;
-    // libass can transcode Unicode into legacy Microsoft GBK/Big5/etc.
-    // A Unicode-only subset plan cannot treat that cmap as empty coverage.
-    // Reject it instead of silently replacing visible text with fallback.
-    if !face
-        .tables()
-        .cmap
-        .is_some_and(|cmap| cmap.subtables.into_iter().any(|table| table.is_unicode()))
-    {
-        return Err(Error::Unsupported("missing-glyph warning mode requires a Unicode cmap; legacy-only or absent cmap is not supported".into()));
-    }
+    // Supported CP936 fonts use their real glyph coverage; other legacy-only
+    // charmaps remain errors, never an empty-coverage warning shortcut.
+    let legacy = legacy::PrcCmap::from_face(&face)?;
     Ok(characters
         .iter()
         .copied()
-        .filter(|&c| !default_ignorable(c) && face.glyph_index(c).is_none_or(|g| g.0 == 0))
+        .filter(|&c| {
+            !default_ignorable(c)
+                && legacy
+                    .map_or_else(|| face.glyph_index(c), |map| map.glyph_index(c))
+                    .is_none_or(|g| g.0 == 0)
+        })
         .collect())
 }
 

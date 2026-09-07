@@ -2,7 +2,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use assfonts_core::{Error, FontFace, MissingGlyphPolicy, Result, Subsetter};
-use assfonts_fonts::{missing_characters, verify_coverage};
+use assfonts_fonts::{missing_characters, prepare_unicode_face, verify_coverage};
 use std::{
     collections::BTreeSet,
     ffi::{c_char, c_void, CStr},
@@ -70,7 +70,11 @@ impl Subsetter for HarfBuzz {
             let missing = missing_characters(&face.data, face.index, characters)?;
             characters.difference(&missing).copied().collect()
         };
-        let length = u32::try_from(face.data.len())
+        let prepared = prepare_unicode_face(&face.data, face.index)?;
+        let (bytes, index) = prepared
+            .as_ref()
+            .map_or((&*face.data, face.index), |data| (data.as_slice(), 0));
+        let length = u32::try_from(bytes.len())
             .map_err(|_| Error::Subset("font larger than 4 GiB".into()))?;
         let unicodes: Vec<u32> = characters.iter().map(|&c| c as u32).collect();
         let count = u32::try_from(unicodes.len())
@@ -79,9 +83,9 @@ impl Subsetter for HarfBuzz {
         // checked, codepoints are sorted by BTreeSet, C++ does not retain inputs.
         let ptr = unsafe {
             af_subset(
-                face.data.as_ptr().cast(),
+                bytes.as_ptr().cast(),
                 length,
-                face.index,
+                index,
                 unicodes.as_ptr(),
                 count,
                 u32::from(policy == MissingGlyphPolicy::Warn),
