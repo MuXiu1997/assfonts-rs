@@ -29,6 +29,38 @@ pub struct FontRequest {
 }
 pub type FontUsage = BTreeMap<FontRequest, BTreeSet<char>>;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MissingGlyphPolicy {
+    #[default]
+    Error,
+    Warn,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FontWarning {
+    pub code: &'static str,
+    pub request: FontRequest,
+    pub source: String,
+    pub face_index: u32,
+    /// Missing cmap entries, not a claim about the renderer's final fallback.
+    pub characters: String,
+    pub missing_from_all_candidates: String,
+}
+
+pub struct PlannedFont {
+    pub face: FontFace,
+    pub characters: BTreeSet<char>,
+    pub request: FontRequest,
+    /// Global catalog registration order, including collection face order.
+    pub order: usize,
+}
+
+pub struct FontPlan {
+    pub fonts: Vec<PlannedFont>,
+    pub warnings: Vec<FontWarning>,
+}
+
 #[derive(Clone, Debug)]
 pub struct FontFace {
     /// Informational label only; identity is derived from bytes and face index.
@@ -54,12 +86,46 @@ pub trait SubtitleCodec: Send + Sync {
 /// Resolvers must document a deterministic policy for equal-ranked candidates.
 pub trait FontResolver: Send + Sync {
     fn resolve(&self, request: &FontRequest, characters: &BTreeSet<char>) -> Result<FontFace>;
+
+    fn plan(&self, usage: &FontUsage, policy: MissingGlyphPolicy) -> Result<FontPlan> {
+        if policy != MissingGlyphPolicy::Error {
+            return Err(Error::Unsupported(
+                "resolver does not support missing-glyph warnings".into(),
+            ));
+        }
+        let mut fonts = Vec::new();
+        for (order, (request, characters)) in usage.iter().enumerate() {
+            fonts.push(PlannedFont {
+                face: self.resolve(request, characters)?,
+                characters: characters.clone(),
+                request: request.clone(),
+                order,
+            });
+        }
+        Ok(FontPlan {
+            fonts,
+            warnings: Vec::new(),
+        })
+    }
 }
 
 /// Return a standalone SFNT, retaining names, shaping tables and requested coverage.
 pub trait Subsetter: Send + Sync {
     fn name(&self) -> &str;
     fn subset(&self, face: &FontFace, characters: &BTreeSet<char>) -> Result<Vec<u8>>;
+    fn subset_with_policy(
+        &self,
+        face: &FontFace,
+        characters: &BTreeSet<char>,
+        policy: MissingGlyphPolicy,
+    ) -> Result<Vec<u8>> {
+        if policy != MissingGlyphPolicy::Error {
+            return Err(Error::Unsupported(
+                "subsetter does not support missing-glyph warnings".into(),
+            ));
+        }
+        self.subset(face, characters)
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -82,6 +148,8 @@ pub struct Report {
     pub input_sha256: String,
     pub output_sha256: String,
     pub fonts: Vec<FontReport>,
+    pub missing_glyph_policy: MissingGlyphPolicy,
+    pub warnings: Vec<FontWarning>,
 }
 
 #[derive(Debug)]
@@ -104,23 +172,44 @@ pub struct Processor<'a> {
 
 impl Processor<'_> {
     pub fn process(&self, subtitle: &str) -> Result<Processed> {
-        type Group = (FontFace, BTreeSet<char>, Vec<FontRequest>);
+        self.process_with_policy(subtitle, MissingGlyphPolicy::Error)
+    }
+
+    pub fn process_with_policy(
+        &self,
+        subtitle: &str,
+        policy: MissingGlyphPolicy,
+    ) -> Result<Processed> {
+        type Group = (FontFace, BTreeSet<char>, Vec<FontRequest>, usize);
         let mut groups: BTreeMap<(String, u32), Group> = BTreeMap::new();
-        for (request, characters) in self.codec.analyze(subtitle)? {
+        let plan = self.resolver.plan(&self.codec.analyze(subtitle)?, policy)?;
+        for PlannedFont {
+            face,
+            request,
+            characters,
+            order,
+        } in plan.fonts
+        {
             // An empty set can represent a drawing-only font dependency.
             // Resolve it and let the subsetter retain its minimal support set.
-            let face = self.resolver.resolve(&request, &characters)?;
             let key = (sha256(&face.data), face.index);
             let group = groups
                 .entry(key)
-                .or_insert_with(|| (face, BTreeSet::new(), Vec::new()));
+                .or_insert_with(|| (face, BTreeSet::new(), Vec::new(), order));
             group.1.extend(characters);
             group.2.push(request);
+            group.3 = group.3.min(order);
         }
         let mut attachments = Vec::new();
         let mut fonts = Vec::new();
-        for ((source_sha256, face_index), (face, characters, requests)) in groups {
-            let data = self.subsetter.subset(&face, &characters)?;
+        let mut ordered: Vec<_> = groups.into_iter().collect();
+        if policy == MissingGlyphPolicy::Warn {
+            ordered.sort_by_key(|(_, group)| group.3);
+        }
+        for ((source_sha256, face_index), (face, characters, requests, _)) in ordered {
+            let data = self
+                .subsetter
+                .subset_with_policy(&face, &characters, policy)?;
             if data.is_empty() {
                 return Err(Error::Subset("backend returned an empty font".into()));
             }
@@ -152,6 +241,8 @@ impl Processor<'_> {
             input_sha256: sha256(subtitle.as_bytes()),
             output_sha256: sha256(output.as_bytes()),
             fonts,
+            missing_glyph_policy: policy,
+            warnings: plan.warnings,
         };
         Ok(Processed {
             subtitle: output,

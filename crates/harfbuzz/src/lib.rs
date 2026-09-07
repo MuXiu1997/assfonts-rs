@@ -1,8 +1,8 @@
 //! Statically linked HarfBuzz adapter; the only Rust crate containing FFI.
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use assfonts_core::{Error, FontFace, Result, Subsetter};
-use assfonts_fonts::verify_coverage;
+use assfonts_core::{Error, FontFace, MissingGlyphPolicy, Result, Subsetter};
+use assfonts_fonts::{missing_characters, verify_coverage};
 use std::{
     collections::BTreeSet,
     ffi::{c_char, c_void, CStr},
@@ -16,6 +16,7 @@ unsafe extern "C" {
         index: u32,
         unicodes: *const u32,
         count: u32,
+        preserve_notdef: u32,
     ) -> *mut c_void;
     fn af_blob_data(blob: *mut c_void, length: *mut u32) -> *const c_char;
     fn af_blob_destroy(blob: *mut c_void);
@@ -53,7 +54,21 @@ impl Subsetter for HarfBuzz {
         &self.name
     }
     fn subset(&self, face: &FontFace, characters: &BTreeSet<char>) -> Result<Vec<u8>> {
-        verify_coverage(&face.data, face.index, characters)?;
+        self.subset_with_policy(face, characters, MissingGlyphPolicy::Error)
+    }
+    fn subset_with_policy(
+        &self,
+        face: &FontFace,
+        characters: &BTreeSet<char>,
+        policy: MissingGlyphPolicy,
+    ) -> Result<Vec<u8>> {
+        let required = if policy == MissingGlyphPolicy::Error {
+            verify_coverage(&face.data, face.index, characters)?;
+            characters.clone()
+        } else {
+            let missing = missing_characters(&face.data, face.index, characters)?;
+            characters.difference(&missing).copied().collect()
+        };
         let length = u32::try_from(face.data.len())
             .map_err(|_| Error::Subset("font larger than 4 GiB".into()))?;
         let unicodes: Vec<u32> = characters.iter().map(|&c| c as u32).collect();
@@ -68,6 +83,7 @@ impl Subsetter for HarfBuzz {
                 face.index,
                 unicodes.as_ptr(),
                 count,
+                u32::from(policy == MissingGlyphPolicy::Warn),
             )
         };
         let blob = Blob(NonNull::new(ptr).ok_or_else(|| {
@@ -86,7 +102,7 @@ impl Subsetter for HarfBuzz {
         // copy into Rust-owned memory while the RAII owner is still alive.
         let output =
             unsafe { std::slice::from_raw_parts(data.cast::<u8>(), output_len as usize) }.to_vec();
-        verify_coverage(&output, 0, characters)
+        verify_coverage(&output, 0, &required)
             .map_err(|e| Error::Subset(format!("output coverage: {e}")))?;
         Ok(output)
     }

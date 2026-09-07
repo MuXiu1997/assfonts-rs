@@ -91,3 +91,44 @@ fn ties_between_different_coverage_do_not_silently_enable_glyph_fallback() {
         "a-later-abc"
     );
 }
+
+#[test]
+fn warn_preserves_candidates_order_and_distinguishes_collective_coverage() {
+    use assfonts_core::MissingGlyphPolicy;
+    let mut catalog = FontCatalog::default();
+    catalog
+        .add(
+            "z-first",
+            &include_bytes!("../../../vendor/harfbuzz/test/api/fonts/Roboto-Regular.ac.ttf")[..],
+        )
+        .unwrap();
+    catalog
+        .add(
+            "a-second",
+            &include_bytes!("../../../vendor/harfbuzz/test/api/fonts/Roboto-Regular.abc.ttf")[..],
+        )
+        .unwrap();
+    let request = FontRequest {
+        family: "Roboto".into(),
+        weight: 400,
+        italic: false,
+    };
+    let usage = [(request, ['b', '\u{378}'].into())].into();
+    assert!(catalog.plan(&usage, MissingGlyphPolicy::Error).is_err());
+    let plan = catalog.plan(&usage, MissingGlyphPolicy::Warn).unwrap();
+    assert_eq!(
+        plan.fonts
+            .iter()
+            .map(|f| f.face.source.as_str())
+            .collect::<Vec<_>>(),
+        ["z-first", "a-second"]
+    );
+    assert_eq!(
+        plan.fonts.iter().map(|f| f.order).collect::<Vec<_>>(),
+        [0, 1]
+    );
+    assert_eq!(plan.warnings.len(), 2);
+    assert_eq!(plan.warnings[0].characters, "b\u{378}");
+    assert_eq!(plan.warnings[0].missing_from_all_candidates, "\u{378}");
+    assert_eq!(plan.warnings[1].characters, "\u{378}");
+}

@@ -1,7 +1,10 @@
 //! Font metadata and deterministic matching over caller-supplied bytes.
 #![forbid(unsafe_code)]
 
-use assfonts_core::{sha256, Error, FontFace, FontRequest, FontResolver, Result};
+use assfonts_core::{
+    sha256, Error, FontFace, FontPlan, FontRequest, FontResolver, FontUsage, FontWarning,
+    MissingGlyphPolicy, PlannedFont, Result,
+};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
@@ -111,7 +114,89 @@ pub fn verify_coverage(bytes: &[u8], index: u32, characters: &BTreeSet<char>) ->
     Ok(())
 }
 
+/// Requested non-ignorable code points without a nonzero cmap glyph.
+pub fn missing_characters(
+    bytes: &[u8],
+    index: u32,
+    characters: &BTreeSet<char>,
+) -> Result<BTreeSet<char>> {
+    let face = ttf_parser::Face::parse(bytes, index).map_err(|e| Error::Font(e.to_string()))?;
+    // libass can transcode Unicode into legacy Microsoft GBK/Big5/etc.
+    // A Unicode-only subset plan cannot treat that cmap as empty coverage.
+    // Reject it instead of silently replacing visible text with fallback.
+    if !face
+        .tables()
+        .cmap
+        .is_some_and(|cmap| cmap.subtables.into_iter().any(|table| table.is_unicode()))
+    {
+        return Err(Error::Unsupported("missing-glyph warning mode requires a Unicode cmap; legacy-only or absent cmap is not supported".into()));
+    }
+    Ok(characters
+        .iter()
+        .copied()
+        .filter(|&c| !default_ignorable(c) && face.glyph_index(c).is_none_or(|g| g.0 == 0))
+        .collect())
+}
+
 impl FontResolver for FontCatalog {
+    fn plan(&self, usage: &FontUsage, policy: MissingGlyphPolicy) -> Result<FontPlan> {
+        let mut plan = FontPlan {
+            fonts: Vec::new(),
+            warnings: Vec::new(),
+        };
+        for (order, (request, characters)) in usage.iter().enumerate() {
+            if policy == MissingGlyphPolicy::Error {
+                plan.fonts.push(PlannedFont {
+                    face: self.resolve(request, characters)?,
+                    characters: characters.clone(),
+                    request: request.clone(),
+                    order,
+                });
+                continue;
+            }
+            let candidates = self.names.get(&normalize(&request.family)).ok_or_else(|| {
+                Error::Font(format!(
+                    "font {:?} not found in supplied sources",
+                    request.family
+                ))
+            })?;
+            let missing = candidates
+                .iter()
+                .map(|&i| {
+                    let face = &self.faces[i].face;
+                    missing_characters(&face.data, face.index, characters).map_err(|error| {
+                        Error::Unsupported(format!("{} face {}: {error}", face.source, face.index))
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let all_missing = missing.iter().fold(characters.clone(), |acc, set| {
+                acc.intersection(set).copied().collect::<BTreeSet<_>>()
+            });
+            // Preserve every same-name candidate and registration order: a
+            // renderer can retry another face when its preferred face lacks a glyph.
+            for (&index, absent) in candidates.iter().zip(missing) {
+                let face = self.faces[index].face.clone();
+                if !absent.is_empty() {
+                    plan.warnings.push(FontWarning {
+                        code: "missing_cmap_glyphs",
+                        request: request.clone(),
+                        source: face.source.clone(),
+                        face_index: face.index,
+                        characters: absent.iter().collect(),
+                        missing_from_all_candidates: all_missing.iter().collect(),
+                    });
+                }
+                plan.fonts.push(PlannedFont {
+                    face,
+                    characters: characters.clone(),
+                    request: request.clone(),
+                    order: index,
+                });
+            }
+        }
+        Ok(plan)
+    }
+
     fn resolve(&self, request: &FontRequest, characters: &BTreeSet<char>) -> Result<FontFace> {
         let candidates = self.names.get(&normalize(&request.family)).ok_or_else(|| {
             Error::Font(format!(

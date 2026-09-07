@@ -54,7 +54,7 @@ static bool close_normalization(hb_face_t* face, hb_set_t* chars) {
 
 extern "C" {
 hb_blob_t* af_subset(const char* bytes, uint32_t length, uint32_t index,
-                     const uint32_t* unicodes, uint32_t count) {
+                     const uint32_t* unicodes, uint32_t count, uint32_t preserve_notdef) {
     owned<hb_blob_t, hb_blob_destroy> blob(
         hb_blob_create(bytes, length, HB_MEMORY_MODE_READONLY, nullptr, nullptr), hb_blob_destroy);
     if (hb_blob_get_length(blob.get()) != length) return nullptr;
@@ -86,7 +86,8 @@ hb_blob_t* af_subset(const char* bytes, uint32_t length, uint32_t index,
     if (!hb_set_allocation_successful(available.get()) || !hb_set_allocation_successful(chars)) return nullptr;
     // Keep localized/legacy names and all layout features; retain default
     // glyph closure, bidi closure and hinting for renderer compatibility.
-    hb_subset_input_set_flags(input.get(), HB_SUBSET_FLAGS_NAME_LEGACY);
+    hb_subset_input_set_flags(input.get(), HB_SUBSET_FLAGS_NAME_LEGACY |
+        (preserve_notdef ? HB_SUBSET_FLAGS_NOTDEF_OUTLINE : 0));
     for (auto type : {HB_SUBSET_SETS_NAME_ID, HB_SUBSET_SETS_NAME_LANG_ID, HB_SUBSET_SETS_LAYOUT_FEATURE_TAG}) {
         hb_set_t* set = hb_subset_input_set(input.get(), type);
         hb_set_clear(set);
