@@ -28,10 +28,14 @@ fn subsets_glyf_and_cff_and_rejects_invalid_inputs() {
         let output = HarfBuzz::default().subset(&face, &chars).unwrap();
         let parsed = ttf_parser::Face::parse(&output, 0).unwrap();
         assert_eq!(parsed.tables().cff.is_some(), cff);
-        assert!(
-            parsed.number_of_glyphs()
-                < ttf_parser::Face::parse(data, 0).unwrap().number_of_glyphs()
-        );
+        let original = ttf_parser::Face::parse(data, 0).unwrap();
+        assert!(parsed.number_of_glyphs() <= original.number_of_glyphs());
+        // The CFF fixture already consists only of a/c and .notdef, all in
+        // the optional support set. Larger fonts must actually lose glyphs.
+        if !cff {
+            assert!(parsed.number_of_glyphs() < original.number_of_glyphs());
+            assert!(parsed.glyph_index('Ж').is_none());
+        }
         assert_eq!(HarfBuzz::default().subset(&face, &chars).unwrap(), output);
         assert!(HarfBuzz::default()
             .subset(
@@ -56,6 +60,33 @@ fn subsets_glyf_and_cff_and_rejects_invalid_inputs() {
             &['a'].into()
         )
         .is_err());
+}
+
+#[test]
+fn support_characters_are_optional_and_drawing_dependencies_can_be_empty() {
+    let face = FontFace {
+        source: "Open Sans".into(),
+        data: Arc::from(
+            &include_bytes!("../../../vendor/harfbuzz/test/api/fonts/OpenSans-Regular.ttf")[..],
+        ),
+        index: 0,
+    };
+    let result = HarfBuzz::default().subset(&face, &BTreeSet::new()).unwrap();
+    let parsed = ttf_parser::Face::parse(&result, 0).unwrap();
+    for ch in [' ', '0', '9', 'A', 'Z', 'a', 'z', '!', '\u{a0}'] {
+        assert!(
+            parsed.glyph_index(ch).is_some(),
+            "missing support character {ch:?}"
+        );
+    }
+    // Optional ideographic/fullwidth coverage cannot make this Latin font fail.
+    assert!(parsed.glyph_index('一').is_none());
+    assert!(
+        parsed.number_of_glyphs()
+            < ttf_parser::Face::parse(&face.data, 0)
+                .unwrap()
+                .number_of_glyphs()
+    );
 }
 
 #[test]

@@ -39,8 +39,8 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     // Golden hashes from the independently render-verified native implementation.
     const hashes = result.report.fonts.map((f: { subset_sha256: string }) => f.subset_sha256).sort()
     require(JSON.stringify(hashes) === JSON.stringify([
-      '1eff4419296e90028c5cbe972094e6204b1af515ce2edd177f01e4857d70ecfb',
-      'c10cb9370954444faaaed28f900fbb122f1cdb674159d86835c8095413332999',
+      '72fa9495a838e24d381e0c21874eb35b621de96b16b67fa5637826554f82072d',
+      '735223fe152e3f9c81a41a45404e02258cde517b2a8bd419fa8160353e43e790',
     ]), 'Subsets differ from native baseline')
     const text: string = result.subtitle
     const [prefix, rest] = text.split('[Fonts]\n')

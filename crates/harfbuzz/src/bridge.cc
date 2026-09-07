@@ -60,6 +60,16 @@ hb_blob_t* af_subset(const char* bytes, uint32_t length, uint32_t index,
     hb_set_add_sorted_array(chars, unicodes, count);
     if (!hb_set_allocation_successful(chars)) return nullptr;
     if (!close_normalization(face.get(), chars)) return nullptr;
+    // Optional renderer support characters, not mandatory source coverage.
+    // Include only glyphs actually supplied by this face. ASCII includes digits,
+    // case variants and punctuation; Latin-1 adds NBSP; fullwidth ASCII and
+    // ideographic space preserve common alternate-width usage and fallbacks.
+    owned<hb_set_t, hb_set_destroy> available(hb_set_create(), hb_set_destroy);
+    hb_face_collect_unicodes(face.get(), available.get());
+    for (auto range : {std::pair<uint32_t,uint32_t>{0x20, 0xff}, {0xff01, 0xff5e}, {0x3000, 0x3000}})
+        for (uint32_t cp = range.first; cp <= range.second; cp++)
+            if (hb_set_has(available.get(), cp)) hb_set_add(chars, cp);
+    if (!hb_set_allocation_successful(available.get()) || !hb_set_allocation_successful(chars)) return nullptr;
     // Keep localized/legacy names and all layout features; retain default
     // glyph closure, bidi closure and hinting for renderer compatibility.
     hb_subset_input_set_flags(input.get(), HB_SUBSET_FLAGS_NAME_LEGACY);
