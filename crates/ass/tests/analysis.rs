@@ -38,6 +38,33 @@ fn drawing_soft_breaks_and_visual_transforms() {
 }
 
 #[test]
+fn drawing_runs_keep_fonts_weights_and_resets_without_path_characters() {
+    let text = r"{\p1}m 0 0 l 50 50{\fnMask\b700}m 1 1 l 2 2{\rOther}m 3 3 l 4 4{\p0}X";
+    let usage = AssCodec.analyze(&script(text)).unwrap();
+    assert!(usage[&FontRequest {
+        family: "First".into(),
+        weight: 400,
+        italic: false
+    }]
+        .is_empty());
+    assert!(usage[&FontRequest {
+        family: "Mask".into(),
+        weight: 700,
+        italic: false
+    }]
+        .is_empty());
+    assert_eq!(
+        usage[&FontRequest {
+            family: "Second".into(),
+            weight: 700,
+            italic: true
+        }],
+        ['X'].into()
+    );
+    assert_eq!(usage.len(), 3);
+}
+
+#[test]
 fn unsupported_or_malformed_input_does_not_succeed() {
     for text in [
         r"{\t(\b700)}X",

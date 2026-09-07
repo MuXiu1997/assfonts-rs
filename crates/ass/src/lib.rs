@@ -332,7 +332,14 @@ fn analyze_event(
             pos += end + 1;
         } else {
             let end = rest.find('{').unwrap_or(rest.len());
-            if !drawing {
+            if drawing {
+                // libass initializes the active font for drawing runs too.
+                // Keep a dependency with no text glyphs instead of collecting
+                // the path syntax or silently omitting its font attachment.
+                if !rest[..end].trim().is_empty() {
+                    usage.entry(current.clone()).or_default();
+                }
+            } else {
                 let mut chars = rest[..end].chars().peekable();
                 while let Some(mut ch) = chars.next() {
                     if ch == '\\' {

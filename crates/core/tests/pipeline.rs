@@ -68,3 +68,34 @@ fn plugins_work_without_native_dependencies_and_union_face_usage() {
     assert_eq!(result.report.fonts[0].face_index, 2);
     assert_eq!(result.report.backend, "test-backend");
 }
+
+#[test]
+fn an_empty_character_set_is_still_a_font_dependency() {
+    struct Drawing;
+    impl SubtitleCodec for Drawing {
+        fn analyze(&self, _: &str) -> Result<FontUsage> {
+            Ok([(
+                FontRequest {
+                    family: "Drawing".into(),
+                    weight: 700,
+                    italic: false,
+                },
+                BTreeSet::new(),
+            )]
+            .into())
+        }
+        fn embed(&self, text: &str, fonts: &[Attachment]) -> Result<String> {
+            Codec.embed(text, fonts)
+        }
+    }
+    let backend = Backend::default();
+    let result = Processor {
+        codec: &Drawing,
+        resolver: &Resolver,
+        subsetter: &backend,
+    }
+    .process("input")
+    .unwrap();
+    assert_eq!(result.attachments.len(), 1);
+    assert_eq!(*backend.0.lock().unwrap(), vec![BTreeSet::new()]);
+}

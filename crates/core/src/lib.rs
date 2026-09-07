@@ -106,9 +106,8 @@ impl Processor<'_> {
         type Group = (FontFace, BTreeSet<char>, Vec<FontRequest>);
         let mut groups: BTreeMap<(String, u32), Group> = BTreeMap::new();
         for (request, characters) in self.codec.analyze(subtitle)? {
-            if characters.is_empty() {
-                continue;
-            }
+            // An empty set can represent a drawing-only font dependency.
+            // Resolve it and let the subsetter retain its minimal support set.
             let face = self.resolver.resolve(&request, &characters)?;
             let key = (sha256(&face.data), face.index);
             let group = groups
