@@ -71,6 +71,7 @@ def main():
     notices.mkdir(exist_ok=True)
     for source, name in [
         (ROOT / "vendor/harfbuzz/COPYING", "harfbuzz-COPYING"),
+        (ROOT / "crates/fonts/data/LICENSE-UNICODE", "cp936-LICENSE-UNICODE"),
         (sdk / "upstream/emscripten/LICENSE", "emscripten-LICENSE"),
         (sdk / "LICENSE", "emsdk-LICENSE"),
     ]:

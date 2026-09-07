@@ -6,6 +6,7 @@
 | ass-core 0.1.2 | Git revision `5c944eaaff75d4fa957d965964e6c039a183b6b8` + Cargo.lock | 上游 workspace 许可；https://github.com/wiedymi/ass-rs |
 | ASS 附件 6-bit 编码器 | `crates/ass/src/attachment.rs`，改写自 Aegisub 的 UUEncode 实现 | Copyright (c) 2013 Thomas Goyne；宽松 ISC 风格许可全文保留在源码中；https://github.com/Aegisub/Aegisub |
 | ttf-parser、cc、clap、serde 等 Rust 依赖 | Cargo.lock | 各 crate 的许可与源包；可通过 `cargo metadata --locked` 查看 |
+| Microsoft CP936 可逆映射数据 | 固定源文件 SHA256，经生成器排除 best-fit；见 `crates/fonts/data/README.md` | `crates/fonts/data/LICENSE-UNICODE`（Unicode License V3）；随 Linux/WASM 包分发，其他分发方式也须携带该许可 |
 | 测试字体 | HarfBuzz 子模块中已有的 test 数据 | 随相应字体及上游目录记录的许可 |
 | libass 0.17.5（仅测试） | 官方 release + SHA256 | ISC；https://github.com/libass/libass |
 | Noto Sans / Noto Sans SC（仅测试） | `tests/render/fonts.json` 的 commit、URL、SHA256 | OFL 1.1；下载时同时保存两个上游许可证，不链接进 CLI |

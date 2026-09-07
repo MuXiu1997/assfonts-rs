@@ -50,6 +50,7 @@ def main():
     ):
         shutil.copyfile(zig_lib / relative, notices / name)
     shutil.copyfile(Path(zig).parent / "LICENSE", notices / "zig-LICENSE")
+    shutil.copyfile(ROOT / "crates/fonts/data/LICENSE-UNICODE", notices / "cp936-LICENSE-UNICODE")
     manifest = {
         "toolchain": pins, "rustc": rust,
         "git_revision": capture("git", "rev-parse", "HEAD"),
