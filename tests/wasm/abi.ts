@@ -7,6 +7,7 @@ type Module = {
   _af_engine_destroy(engine: number): void
   _af_add_font(engine: number, label: number, labelLength: number, bytes: number, length: number): number
   _af_process(engine: number, bytes: number, length: number): number
+  _af_set_missing_glyph_policy(engine: number, policy: number): number
   _af_result_ptr(engine: number): number
   _af_result_len(engine: number): number
 }
@@ -49,6 +50,12 @@ export class MemoryEngine {
     if (!this.engine) throw new Error('Engine closed')
     return this.bytes(bytes, (pointer, length) =>
       this.response(this.module._af_process(this.engine, pointer, length)))
+  }
+
+  setMissingGlyphPolicy(policy: 'error' | 'warn') {
+    if (!this.engine) throw new Error('Engine closed')
+    if (policy !== 'error' && policy !== 'warn') throw new Error('Invalid missing-glyph policy')
+    return this.response(this.module._af_set_missing_glyph_policy(this.engine, policy === 'warn' ? 1 : 0))
   }
 
   close() {

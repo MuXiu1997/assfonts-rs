@@ -53,6 +53,17 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     require(scratch !== 0 && module.HEAPU8.length > previousBytes, 'Memory did not grow')
     module._af_free(scratch, previousBytes)
     require(active.process(input).subtitle === text, 'Repeated processing changed output')
+    const missingInput = new TextEncoder().encode(original.replace(/(Dialogue:[^\n]*)/, '$1\u0378'))
+    expectError(() => active.process(missingInput), 'missing glyphs')
+    active.setMissingGlyphPolicy('warn')
+    const warned = active.process(missingInput)
+    require(warned.report.missing_glyph_policy === 'warn' && warned.report.warnings.length > 0, 'Missing warning report')
+    const probe = module._af_engine_new()
+    require(module._af_set_missing_glyph_policy(probe, 2) === 0, 'Invalid policy accepted')
+    module._af_engine_destroy(probe)
+    active.setMissingGlyphPolicy('error')
+    expectError(() => active.process(missingInput), 'missing glyphs')
+    require(active.process(input).subtitle === text, 'Policy switch changed strict output')
     await Deno.mkdir(output, { recursive: true })
     await Deno.writeFile(`${output}/input.ass`, input)
     await Deno.writeTextFile(`${output}/input.assfonts.ass`, text)
@@ -65,8 +76,9 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     await Deno.writeTextFile(`${output}/processing.json`, JSON.stringify(result.report, null, 2) + '\n')
     active.close()
     expectError(() => active.process(input), 'closed')
+    expectError(() => active.setMissingGlyphPolicy('warn'), 'closed')
     scope.postMessage({ ok: true, checks: ['UTF-8 rejection', 'missing-font rejection', 'malformed-font recovery',
-      'copied font data', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'close'],
+      'copied font data', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'close'],
       memory_bytes: module.HEAPU8.length, deno: Deno.version.deno })
   } catch (error) {
     scope.postMessage({ ok: false, error: String(error) })

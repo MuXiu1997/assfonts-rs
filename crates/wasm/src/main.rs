@@ -1,6 +1,6 @@
 //! In-memory Emscripten adapter. No file system, process spawning, or CLI parsing.
 use assfonts_ass::AssCodec;
-use assfonts_core::Processor;
+use assfonts_core::{MissingGlyphPolicy, Processor};
 use assfonts_fonts::FontCatalog;
 use assfonts_harfbuzz::HarfBuzz;
 use std::{
@@ -12,6 +12,7 @@ struct Engine {
     catalog: FontCatalog,
     backend: HarfBuzz,
     output: Vec<u8>,
+    missing_glyph_policy: MissingGlyphPolicy,
 }
 
 impl Engine {
@@ -50,6 +51,7 @@ pub extern "C" fn af_engine_new() -> *mut std::ffi::c_void {
         catalog: FontCatalog::default(),
         backend: HarfBuzz::default(),
         output: Vec::new(),
+        missing_glyph_policy: MissingGlyphPolicy::Error,
     }))
     .cast()
 }
@@ -116,7 +118,7 @@ pub unsafe extern "C" fn af_process(
         resolver: &engine.catalog,
         subsetter: &engine.backend,
     };
-    match processor.process(text) {
+    match processor.process_with_policy(text, engine.missing_glyph_policy) {
         Ok(processed) => engine.reply(
             serde_json::json!({
                 "subtitle": processed.subtitle, "report": processed.report,
@@ -125,6 +127,30 @@ pub unsafe extern "C" fn af_process(
         ),
         Err(error) => engine.error(error),
     }
+}
+
+/// Selects strict errors (0, default) or missing-cmap warnings (1).
+/// Invalid values leave the policy unchanged. Warn requires a fixed external
+/// renderer/default-font environment; it does not supply a fallback font.
+///
+/// # Safety
+/// `ptr` must identify a live engine, used exclusively during this call.
+/// The previous response is invalidated.
+#[no_mangle]
+pub unsafe extern "C" fn af_set_missing_glyph_policy(
+    ptr: *mut std::ffi::c_void,
+    policy: u32,
+) -> i32 {
+    let engine = &mut *ptr.cast::<Engine>();
+    engine.missing_glyph_policy = match policy {
+        0 => MissingGlyphPolicy::Error,
+        1 => MissingGlyphPolicy::Warn,
+        _ => return engine.error("invalid missing-glyph policy; expected 0 or 1"),
+    };
+    engine.reply(
+        serde_json::json!({"missing_glyph_policy":engine.missing_glyph_policy}),
+        true,
+    )
 }
 
 /// Borrows the last UTF-8 JSON response; copy it before mutating the engine.
@@ -151,6 +177,29 @@ fn main() {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn policy_validation_is_transactional() {
+        let engine = af_engine_new();
+        unsafe {
+            assert_eq!(
+                (*engine.cast::<Engine>()).missing_glyph_policy,
+                MissingGlyphPolicy::Error
+            );
+            assert_eq!(af_set_missing_glyph_policy(engine, 1), 1);
+            assert_eq!(af_set_missing_glyph_policy(engine, u32::MAX), 0);
+            assert_eq!(
+                (*engine.cast::<Engine>()).missing_glyph_policy,
+                MissingGlyphPolicy::Warn
+            );
+            assert_eq!(af_set_missing_glyph_policy(engine, 0), 1);
+            assert_eq!(
+                (*engine.cast::<Engine>()).missing_glyph_policy,
+                MissingGlyphPolicy::Error
+            );
+            af_engine_destroy(engine);
+        }
+    }
 
     #[test]
     fn abi_preserves_input_and_recovers_from_errors() {

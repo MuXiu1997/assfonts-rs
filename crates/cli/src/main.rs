@@ -4,7 +4,7 @@ mod backend;
 mod files;
 use anyhow::{bail, Context, Result};
 use assfonts_ass::AssCodec;
-use assfonts_core::{FontResolver, Processor, SubtitleCodec};
+use assfonts_core::{FontResolver, MissingGlyphPolicy, Processor, SubtitleCodec};
 use assfonts_fonts::FontCatalog;
 use clap::Parser;
 use serde::Serialize;
@@ -39,6 +39,9 @@ struct Args {
     /// Compiled subsetter backend
     #[arg(long, default_value = "harfbuzz")]
     backend: String,
+    /// Missing cmap glyphs: warn requires an identical external renderer/default-font environment
+    #[arg(long, default_value = "error", value_parser = ["error", "warn"])]
+    missing_glyphs: String,
     /// List compiled backends and exit
     #[arg(long)]
     list_backends: bool,
@@ -59,6 +62,11 @@ struct FileReport {
 }
 
 fn run(args: Args) -> Result<()> {
+    let policy = if args.missing_glyphs == "warn" {
+        MissingGlyphPolicy::Warn
+    } else {
+        MissingGlyphPolicy::Error
+    };
     if args.list_backends {
         println!("{}", backend::available().join("\n"));
         return Ok(());
@@ -85,12 +93,13 @@ fn run(args: Args) -> Result<()> {
             let usage = AssCodec
                 .analyze(&text)
                 .with_context(|| format!("analyze {}", input.display()))?;
-            for (request, characters) in &usage {
-                catalog
-                    .resolve(request, characters)
-                    .with_context(|| format!("check {}", input.display()))?;
+            let plan = catalog
+                .plan(&usage, policy)
+                .with_context(|| format!("check {}", input.display()))?;
+            if args.verbosity > 0 && !plan.warnings.is_empty() {
+                eprintln!("{}: {} missing-cmap warning(s); fixed renderer/default-font environment required", input.display(), plan.warnings.len());
             }
-            checked.push(serde_json::json!({"input":input,"font_requests":usage.len()}));
+            checked.push(serde_json::json!({"input":input,"font_requests":usage.len(),"missing_glyph_policy":policy,"warnings":plan.warnings}));
         }
         if args.json {
             println!(
@@ -144,7 +153,7 @@ fn run(args: Args) -> Result<()> {
         let text = fs::read_to_string(input)
             .with_context(|| format!("read UTF-8 ASS {}", input.display()))?;
         let result = processor
-            .process(&text)
+            .process_with_policy(&text, policy)
             .with_context(|| format!("process {}", input.display()))?;
         if args.verbosity > 1 {
             eprintln!(
@@ -152,6 +161,13 @@ fn run(args: Args) -> Result<()> {
                 input.display(),
                 result.report.fonts.len(),
                 result.subtitle.len()
+            );
+        }
+        if args.verbosity > 0 && !result.report.warnings.is_empty() {
+            eprintln!(
+                "{}: {} missing-cmap warning(s); fixed renderer/default-font environment required",
+                input.display(),
+                result.report.warnings.len()
             );
         }
         prepared.push(result.subtitle);

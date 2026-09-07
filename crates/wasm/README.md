@@ -6,6 +6,10 @@ UTF-8 ASS 由调用者传入，返回 JSON。原生 CLI 仍是 workspace 默认�
 
 调用顺序：
 
+默认严格拒绝缺字。可用 `af_set_missing_glyph_policy(engine, 1)` 显式开启 warning，
+`0` 恢复严格模式；非法值报错且不改变策略。调用后读取的响应会替换前一次结果。
+warning 不加载默认字体，宿主环境约束见 [缺字策略](../../docs/missing-glyph-policy.md)。
+
 1. `af_engine_new()` 创建独立字体 catalog。
 2. `af_alloc(len)` 分配输入缓冲区，写入字体/来源名；`af_add_font` 复制并索引
    字体，调用后用 `af_free(ptr, 原始长度)` 释放输入缓冲区。可添加多个文件。

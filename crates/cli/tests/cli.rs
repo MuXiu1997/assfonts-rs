@@ -85,6 +85,47 @@ fn batch_processing_failure_publishes_nothing() {
 }
 
 #[test]
+fn missing_glyph_policy_is_opt_in_for_check_and_embed() {
+    let tmp = TempDir::new().unwrap();
+    let input = tmp.path().join("input.ass");
+    let out = tmp.path().join("out");
+    let text = ASS.replace("Hello", "\u{378}Hello");
+    assert_ne!(text, ASS);
+    fs::write(&input, &text).unwrap();
+    assert!(!invoke(&input, &out, &["--check"]).status.success());
+    assert!(!invoke(&input, &out, &[]).status.success());
+    let check = invoke(
+        &input,
+        &out,
+        &["--check", "--missing-glyphs", "warn", "--json"],
+    );
+    assert!(
+        check.status.success(),
+        "{}",
+        String::from_utf8_lossy(&check.stderr)
+    );
+    assert!(!out.join("input.assfonts.ass").exists());
+    let checked: serde_json::Value = serde_json::from_slice(&check.stdout).unwrap();
+    assert_eq!(checked["files"][0]["warnings"][0]["characters"], "\u{378}");
+    let embedded = invoke(&input, &out, &["--missing-glyphs", "warn", "--json"]);
+    assert!(embedded.status.success());
+    let report: serde_json::Value = serde_json::from_slice(&embedded.stdout).unwrap();
+    assert_eq!(report["files"][0]["missing_glyph_policy"], "warn");
+    assert_eq!(
+        report["files"][0]["warnings"],
+        checked["files"][0]["warnings"]
+    );
+    assert!(String::from_utf8_lossy(&embedded.stderr).contains("warning"));
+    assert_eq!(fs::read_to_string(&input).unwrap(), text);
+    fs::write(&input, ASS.replace("Open Sans", "Missing Font")).unwrap();
+    assert!(
+        !invoke(&input, &out, &["--check", "--missing-glyphs", "warn"])
+            .status
+            .success()
+    );
+}
+
+#[test]
 fn report_cannot_replace_a_source_or_subtitle_output() {
     let tmp = TempDir::new().unwrap();
     let input = tmp.path().join("input.ass");
