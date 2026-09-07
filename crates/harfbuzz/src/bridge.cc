@@ -2,6 +2,10 @@
 // except an owned output blob; all destruction uses the allocating library.
 #include "hb.h"
 #include "hb-subset.h"
+// Use the exact sanitizer used by this pinned HarfBuzz renderer. A rejected
+// optional BASE table is invisible to shaping, but otherwise aborts subsetting.
+#include "hb-ot-var-common.hh"
+#include "hb-ot-layout-base-table.hh"
 #include <cstdint>
 #include <initializer_list>
 #include <memory>
@@ -58,6 +62,14 @@ hb_blob_t* af_subset(const char* bytes, uint32_t length, uint32_t index,
     if (!hb_face_get_glyph_count(face.get())) return nullptr;
     owned<hb_subset_input_t, hb_subset_input_destroy> input(hb_subset_input_create_or_fail(), hb_subset_input_destroy);
     if (!input) return nullptr;
+    {
+        owned<hb_blob_t, hb_blob_destroy> raw(hb_face_reference_table(face.get(), HB_TAG('B','A','S','E')), hb_blob_destroy);
+        if (hb_blob_get_length(raw.get())) {
+            owned<hb_blob_t, hb_blob_destroy> sanitized(hb_sanitize_context_t().reference_table<OT::BASE>(face.get()), hb_blob_destroy);
+            if (!hb_blob_get_length(sanitized.get()))
+                hb_set_add(hb_subset_input_set(input.get(), HB_SUBSET_SETS_DROP_TABLE_TAG), HB_TAG('B','A','S','E'));
+        }
+    }
     hb_set_t* chars = hb_subset_input_unicode_set(input.get());
     hb_set_add_sorted_array(chars, unicodes, count);
     if (!hb_set_allocation_successful(chars)) return nullptr;
