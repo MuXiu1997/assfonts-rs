@@ -19,9 +19,10 @@ def main():
     output = parent / "render"
     subprocess.run(["deno", "run", "--allow-read", "--allow-write", "--deny-run", "--deny-net",
                     "--no-remote", "tests/wasm/verify.ts", str(fonts), str(output)], cwd=ROOT, check=True)
-    with (output / "render.json").open("w") as report:
-        subprocess.run([str(oracle), str(output), str(fonts / "NotoSans.ttc"),
-                        str(fonts / "NotoSansSC-Regular.otf")], cwd=ROOT, stdout=report, check=True)
+    for artifact_dir in [output, *sorted(output.glob("parser-*"))]:
+        with (artifact_dir / "render.json").open("w") as report:
+            subprocess.run([str(oracle), str(artifact_dir), str(fonts / "NotoSans.ttc"),
+                            str(fonts / "NotoSansSC-Regular.otf")], cwd=ROOT, stdout=report, check=True)
     print(f"WASM and RGBA validation passed: {output}")
 
 

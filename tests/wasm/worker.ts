@@ -1,5 +1,6 @@
 import { loadModule, MemoryEngine } from './abi.ts'
 import { makeLegacyFont } from './legacy-font.ts'
+import { verifyParserCompatibility } from './parser-compat.ts'
 
 const scope = globalThis as unknown as {
   onmessage: (event: MessageEvent<{ fonts: string; output: string }>) => void
@@ -66,6 +67,7 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
       '72fa9495a838e24d381e0c21874eb35b621de96b16b67fa5637826554f82072d',
       '735223fe152e3f9c81a41a45404e02258cde517b2a8bd419fa8160353e43e790',
     ]), 'Subsets differ from native baseline')
+    await verifyParserCompatibility(active, original, hashes, output)
     const text: string = result.subtitle
     const [prefix, rest] = text.split('[Fonts]\n')
     const [attachments, events] = rest.split('[Events]')
@@ -132,7 +134,7 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     expectError(() => active.process(input), 'closed')
     expectError(() => active.setMissingGlyphPolicy('warn'), 'closed')
     scope.postMessage({ ok: true, checks: ['UTF-8 rejection', 'missing-font rejection', 'malformed-font recovery',
-      'copied font data', 'duplicate copy avoided', 'detached-input recovery', 'response cleared', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'default warn', 'explicit strict goldens', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'legacy CP936 format 2', 'legacy source identity', 'legacy error/warn', 'close'],
+      'copied font data', 'duplicate copy avoided', 'detached-input recovery', 'response cleared', 'TTC face 1', 'CFF', 'native subset hashes', 'parser compatibility and preservation', 'ASS preservation', 'memory.grow', 'default warn', 'explicit strict goldens', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'legacy CP936 format 2', 'legacy source identity', 'legacy error/warn', 'close'],
       memory_bytes: module.HEAPU8.length, deno: Deno.version.deno })
   } catch (error) {
     scope.postMessage({ ok: false, error: String(error) })
