@@ -3,6 +3,7 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -32,6 +33,19 @@ jobs:
           mise run setup:renderer
       - name: Run Deno isolation tests, RGBA and attachment-removal controls
         run: mise run test:wasm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build and verify the npm tarball
+        run: |
+          npm ci --prefix packages/assfonts-rs-wasm
+          python scripts/package_wasm.py
+          python scripts/test_npm_wasm.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: assfonts-rs-wasm-npm
+          if-no-files-found: error
+          path: target/npm/*.tgz
       - name: Package the verified module without rebuilding
         run: |
           cp THIRD_PARTY.md target/wasm/

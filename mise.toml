@@ -53,7 +53,7 @@ run = [
   "cargo fmt --all -- --check",
   "cargo clippy --workspace --all-targets --locked -- -D warnings",
   "cargo check -p assfonts-cli --no-default-features --locked",
-  "actionlint -shellcheck= .github/workflows/ci.yml .github/workflows/wasm.yml",
+  "actionlint -shellcheck= .github/workflows/ci.yml .github/workflows/wasm.yml .github/workflows/release-wasm.yml",
   "deno check tests/wasm/verify.ts tests/wasm/worker.ts",
 ]
 

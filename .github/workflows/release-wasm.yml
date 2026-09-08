@@ -1,0 +1,57 @@
+name: publish-wasm-npm
+on:
+  push:
+    tags: ['wasm-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-wasm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check tag against package version
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs';
+          const pkg = JSON.parse(readFileSync('packages/assfonts-rs-wasm/package.json'));
+          if (pkg.name !== '@muxiu1997/assfonts-rs-wasm' || process.env.GITHUB_REF_NAME !== `wasm-v${pkg.version}`) {
+            throw new Error('Tag or package name mismatch');
+          }
+          if (!/^\d+\.\d+\.\d+-beta\.\d+$/.test(pkg.version) || pkg.publishConfig?.tag !== 'beta') {
+            throw new Error('Only beta versions on the beta dist-tag are currently allowed');
+          }
+          JS
+  build:
+    needs: version
+    uses: ./.github/workflows/wasm.yml
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: assfonts-rs-wasm-npm
+          path: package
+      - name: Publish the tested tarball through trusted publishing
+        run: |
+          shopt -s nullglob
+          packages=(package/*.tgz)
+          test "${#packages[@]}" -eq 1
+          npm publish "${packages[0]}" --access public --tag beta --provenance
