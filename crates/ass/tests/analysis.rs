@@ -71,6 +71,47 @@ fn valid_bold_values_and_unsupported_high_values_keep_their_contract() {
 }
 
 #[test]
+fn tagless_transforms_do_not_change_font_usage() {
+    for transform in [r"\t()", r"\t(100,6590)", r"\t(100,6590"] {
+        let actual = script(&format!(r"{{{transform}}}A{{\fnSecond}}B"));
+        assert_eq!(
+            AssCodec.analyze(&actual).unwrap(),
+            AssCodec.analyze(&script(r"A{\fnSecond}B")).unwrap()
+        );
+    }
+}
+
+#[test]
+fn unterminated_visual_transforms_keep_the_final_tag_and_next_block() {
+    for tags in [r"\c&HFAFAFC&", r"\fscx120\blur2", r"\alpha&HFF&"] {
+        let closed = script(&format!(r"{{\t(37,750,{tags})}}A{{\fnSecond}}B"));
+        let open = closed.replace(&format!("{tags})"), tags);
+        assert_eq!(
+            AssCodec.analyze(&open).unwrap(),
+            AssCodec.analyze(&closed).unwrap()
+        );
+    }
+    for tags in [
+        r"\fnSecond",
+        r"\b1",
+        r"\i1",
+        r"\rOther",
+        r"\p1",
+        r"\unknown",
+        r"\t(\fs20)",
+    ] {
+        for ending in ["", ")"] {
+            assert!(
+                AssCodec
+                    .analyze(&script(&format!(r"{{\t(37,750,{tags}{ending}}}A")))
+                    .is_err(),
+                "{tags}{ending}"
+            );
+        }
+    }
+}
+
+#[test]
 fn drawing_soft_breaks_and_visual_transforms() {
     let usage = AssCodec.analyze(&script(r"{\p1}m 0 0 l 50 50{\rOther}l 1 1{\p0\q2}A\nB{\q0}C\nD\hE{\t(0,500,\fs40\alpha&H00&)}F")).unwrap();
     let chars: String = usage.values().flat_map(|c| c.iter()).collect();

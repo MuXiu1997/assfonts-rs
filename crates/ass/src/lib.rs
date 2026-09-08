@@ -163,15 +163,18 @@ fn fatal_tag_diagnostics(diagnostics: &[TagDiagnostic<'_>]) -> bool {
 
 // A transform can change font selection over time; do not silently miss its faces.
 fn check_transform(args: &str) -> Result<()> {
-    if !args.starts_with('(') || !args.ends_with(')') {
+    let Some(body) = args.strip_prefix('(') else {
         return Err(invalid("malformed transform"));
-    }
-    let Some(start) = args.find('\\') else {
-        return Err(invalid("transform without tags"));
+    };
+    // libass accepts a missing closing parenthesis up to the block's end.
+    let body = body.strip_suffix(')').unwrap_or(body);
+    let Some(start) = body.find('\\') else {
+        // No inner tags means no font changes; preserve the original ASS.
+        return Ok(());
     };
     let mut tags = Vec::new();
     let mut diagnostics = Vec::new();
-    parse_override_block(&args[start..args.len() - 1], 0, &mut tags, &mut diagnostics);
+    parse_override_block(&body[start..], 0, &mut tags, &mut diagnostics);
     if fatal_tag_diagnostics(&diagnostics) {
         return Err(invalid(format!("transform diagnostics: {diagnostics:?}")));
     }
