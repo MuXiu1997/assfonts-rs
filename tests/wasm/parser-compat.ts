@@ -11,13 +11,24 @@ export async function verifyParserCompatibility(
     ['empty-override', original.replaceAll('\\fn', '\\\\fn')],
     ['missing-reset', original.replace('\\rDefault', '\\rDefault\\r0')],
     ['duplicate-style', original.replace(style, style.replace('Noto Sans,', 'Noto Sans SC,') + '\n' + style)],
+    ['tab-as-space', original.replace('office ffi', 'office\tffi')],
+    ['ignored-preamble', '; [Script Info]\n==== ignored preamble ====\nWrapStyle: 0\n' + original],
+    ['del-character', original.replace('office', 'office\u007f')],
   ]
   for (const [name, input] of variants) {
     if (input === original) throw new Error('Parser fixture did not change: ' + name)
-    const result = engine.process(new TextEncoder().encode(input))
+    const isDel = name === 'del-character'
+    // DEL must reach glyph resolution, including warn mode if this font lacks it.
+    if (isDel) engine.setMissingGlyphPolicy('warn')
+    let result
+    try { result = engine.process(new TextEncoder().encode(input)) }
+    finally { if (isDel) engine.setMissingGlyphPolicy('error') }
     const hashes = result.report.fonts.map((f: { subset_sha256: string }) => f.subset_sha256).sort()
-    if (JSON.stringify(hashes) !== JSON.stringify(expectedHashes)) {
+    if (!isDel && JSON.stringify(hashes) !== JSON.stringify(expectedHashes)) {
       throw new Error('Parser compatibility changed font usage: ' + name)
+    }
+    if (isDel && !result.report.fonts.some((f: { characters: string }) => f.characters.includes('\u007f'))) {
+      throw new Error('DEL was silently dropped before glyph resolution')
     }
     const preserved = result.subtitle.replace(/\[Fonts\]\n[\s\S]*?(?=\[Events\])/, '')
     if (preserved !== input) throw new Error('Parser compatibility rewrote ASS: ' + name)
