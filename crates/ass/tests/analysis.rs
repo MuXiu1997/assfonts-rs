@@ -31,6 +31,46 @@ fn ascii_font_names_resets_and_empty_tags_follow_active_style() {
 }
 
 #[test]
+fn invalid_low_bold_values_fall_back_to_active_style_only() {
+    for value in [-100, -1, 2, 4, 20, 99] {
+        let actual = script(&format!(
+            r"{{\b1\b{value}}}A{{\rOther\b0\fnOverride\i0\b{value}}}B{{\rMissing\b1\b{value}}}C"
+        ));
+        let expected = script(r"{\b0}A{\rOther\fnOverride\i0\b1}B{\rMissing\b0}C");
+        assert_eq!(
+            AssCodec.analyze(&actual).unwrap(),
+            AssCodec.analyze(&expected).unwrap(),
+            "{value}"
+        );
+    }
+}
+
+#[test]
+fn valid_bold_values_and_unsupported_high_values_keep_their_contract() {
+    for (value, weight) in [
+        (0, 400),
+        (1, 700),
+        (100, 100),
+        (400, 400),
+        (700, 700),
+        (900, 900),
+    ] {
+        let usage = AssCodec
+            .analyze(&script(&format!(r"{{\b{value}}}A")))
+            .unwrap();
+        assert_eq!(
+            usage[&FontRequest {
+                family: "First".into(),
+                weight,
+                italic: false
+            }],
+            ['A'].into()
+        );
+    }
+    assert!(AssCodec.analyze(&script(r"{\b901}A")).is_err());
+}
+
+#[test]
 fn drawing_soft_breaks_and_visual_transforms() {
     let usage = AssCodec.analyze(&script(r"{\p1}m 0 0 l 50 50{\rOther}l 1 1{\p0\q2}A\nB{\q0}C\nD\hE{\t(0,500,\fs40\alpha&H00&)}F")).unwrap();
     let chars: String = usage.values().flat_map(|c| c.iter()).collect();

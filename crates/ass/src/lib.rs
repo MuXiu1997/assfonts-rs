@@ -315,6 +315,9 @@ fn analyze_event(
                             match integer(arg)? {
                                 0 => 400,
                                 1 => 700,
+                                // libass resets invalid low values to the active style,
+                                // not the previous override or the event's initial style.
+                                n if n < 100 => active_style.weight,
                                 n @ 100..=900 => n as u16,
                                 _ => return Err(Error::Unsupported(format!("bold weight {arg}"))),
                             }
