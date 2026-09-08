@@ -17,6 +17,8 @@ warning 不加载默认字体，宿主环境约束见 [缺字策略](../../docs/
 4. `af_result_ptr` / `af_result_len` 返回借用的 UTF-8 JSON；读取后立即复制。
    添加字体或处理失败返回 0，并提供 `{"error":"..."}`；成功返回 1。
    处理成功的 JSON 含 `subtitle` 和 `report`。普通输入错误不会使 catalog 失效。
+   宿主完成复制/解码后，可调用 `af_result_clear(engine)` 立即释放 WASM 响应，
+   保留字体 catalog；长度归零，重复 clear 安全。下一次 add/process 也会先释放旧响应。
 5. `af_engine_destroy` 释放 catalog 和响应；不要二次释放或继续使用句柄。
 
 这是受信任宿主适配器使用的内部 ABI，不验证任意地址的合法性。所有裸指针都必须
@@ -27,6 +29,7 @@ warning 不加载默认字体，宿主环境约束见 [缺字策略](../../docs/
 
 字体匹配、语法拒绝规则和原生版本相同。内存与输入大小相关，没有在此接口中加入
 LRU 或总量限制；销毁 engine 不代表运行时马上向操作系统归还 RSS。
+重复添加字节相同的字体会在复制前去重，保留首次来源名和注册顺序。
 
 原生 ABI 合同测试（不需要 Emscripten）：
 

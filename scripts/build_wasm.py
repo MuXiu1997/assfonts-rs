@@ -45,7 +45,7 @@ def main():
     if not re.search(rf"\b{re.escape(pins['emsdk'])}\b", emcc):
         raise RuntimeError("Active Emscripten compiler version mismatch")
     exports = ["_af_alloc", "_af_free", "_af_engine_new", "_af_engine_destroy",
-               "_af_add_font", "_af_process", "_af_set_missing_glyph_policy", "_af_result_ptr", "_af_result_len"]
+               "_af_add_font", "_af_process", "_af_set_missing_glyph_policy", "_af_result_ptr", "_af_result_len", "_af_result_clear"]
     flags = ["-C", "panic=abort"]
     for setting in [
         "MODULARIZE=1", "EXPORT_ES6=1", "ENVIRONMENT=web,worker", "INVOKE_RUN=0",

@@ -16,6 +16,9 @@ struct Engine {
 }
 
 impl Engine {
+    fn clear_result(&mut self) {
+        self.output = Vec::new();
+    }
     fn reply(&mut self, value: serde_json::Value, ok: bool) -> i32 {
         self.output = serde_json::to_vec(&value).expect("serializable response");
         i32::from(ok)
@@ -83,11 +86,15 @@ pub unsafe extern "C" fn af_add_font(
     len: usize,
 ) -> i32 {
     let engine = &mut *ptr.cast::<Engine>();
+    engine.clear_result();
     let label = match str::from_utf8(slice::from_raw_parts(label, label_len)) {
         Ok(value) => value,
         Err(error) => return engine.error(error),
     };
-    match engine.catalog.add(label, slice::from_raw_parts(data, len)) {
+    match engine
+        .catalog
+        .add_slice(label, slice::from_raw_parts(data, len))
+    {
         Ok(()) => engine.reply(
             serde_json::json!({"faces": engine.catalog.face_count()}),
             true,
@@ -109,6 +116,9 @@ pub unsafe extern "C" fn af_process(
     len: usize,
 ) -> i32 {
     let engine = &mut *ptr.cast::<Engine>();
+    // The ABI invalidates the previous response at this call, so it need not
+    // remain allocated throughout analysis, subsetting and serialization.
+    engine.clear_result();
     let text = match str::from_utf8(slice::from_raw_parts(data, len)) {
         Ok(value) => value,
         Err(error) => return engine.error(error),
@@ -119,12 +129,23 @@ pub unsafe extern "C" fn af_process(
         subsetter: &engine.backend,
     };
     match processor.process_with_policy(text, engine.missing_glyph_policy) {
-        Ok(processed) => engine.reply(
-            serde_json::json!({
-                "subtitle": processed.subtitle, "report": processed.report,
-            }),
-            true,
-        ),
+        Ok(processed) => {
+            #[derive(serde::Serialize)]
+            struct Response<'a> {
+                report: &'a assfonts_core::Report,
+                subtitle: &'a str,
+            }
+            // The subtitle already includes the attachments. Release their
+            // binary buffers before serializing, and borrow the subtitle rather
+            // than copying it into a serde_json::Value first.
+            drop(processed.attachments);
+            engine.output = serde_json::to_vec(&Response {
+                report: &processed.report,
+                subtitle: &processed.subtitle,
+            })
+            .expect("serializable response");
+            1
+        }
         Err(error) => engine.error(error),
     }
 }
@@ -142,6 +163,7 @@ pub unsafe extern "C" fn af_set_missing_glyph_policy(
     policy: u32,
 ) -> i32 {
     let engine = &mut *ptr.cast::<Engine>();
+    engine.clear_result();
     engine.missing_glyph_policy = match policy {
         0 => MissingGlyphPolicy::Error,
         1 => MissingGlyphPolicy::Warn,
@@ -151,6 +173,16 @@ pub unsafe extern "C" fn af_set_missing_glyph_policy(
         serde_json::json!({"missing_glyph_policy":engine.missing_glyph_policy}),
         true,
     )
+}
+
+/// Releases the last response without discarding the font catalog.
+///
+/// # Safety
+/// `ptr` must be a live engine, used exclusively during this call, with no
+/// outstanding borrowed response views. The response length becomes zero.
+#[no_mangle]
+pub unsafe extern "C" fn af_result_clear(ptr: *mut std::ffi::c_void) {
+    (&mut *ptr.cast::<Engine>()).clear_result();
 }
 
 /// Borrows the last UTF-8 JSON response; copy it before mutating the engine.
@@ -252,6 +284,16 @@ mod tests {
             assert_eq!(restored.as_bytes(), subtitle);
             assert_eq!(response["report"]["fonts"].as_array().unwrap().len(), 1);
             assert_eq!(response["report"]["missing_glyph_policy"], "warn");
+            af_result_clear(engine);
+            assert_eq!(af_result_len(engine), 0);
+            af_result_clear(engine); // Idempotent, catalog stays available.
+            assert_eq!(af_process(engine, subtitle.as_ptr(), subtitle.len()), 1);
+            let repeated: serde_json::Value = serde_json::from_slice(slice::from_raw_parts(
+                af_result_ptr(engine),
+                af_result_len(engine),
+            ))
+            .unwrap();
+            assert_eq!(repeated, response);
             af_engine_destroy(engine);
         }
     }

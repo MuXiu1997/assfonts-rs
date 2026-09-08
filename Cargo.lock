@@ -140,6 +140,7 @@ dependencies = [
  "assfonts-core",
  "assfonts-fonts",
  "assfonts-harfbuzz",
+ "serde",
  "serde_json",
 ]
 

@@ -22,6 +22,20 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
   let engine: MemoryEngine | undefined
   try {
     const module = await loadModule()
+    // A valid font with harmless trailing padding makes a redundant full copy
+    // large enough to force growth in a fresh module. Duplicates must reuse the
+    // catalog and the input allocation freed by addFont's finally block.
+    const padded = new Uint8Array(8 * 1024 * 1024)
+    padded.set(await Deno.readFile(new URL('../../vendor/harfbuzz/test/api/fonts/OpenSans-Regular.ttf', import.meta.url)))
+    const duplicateProbe = new MemoryEngine(module)
+    try {
+      duplicateProbe.addFont('padded.ttf', padded)
+      const capacity = module.HEAPU8.length
+      for (let i = 0; i < 5; i++) {
+        require(duplicateProbe.addFont('duplicate.ttf', padded).faces === 1, 'Duplicate added a face')
+        require(module.HEAPU8.length === capacity, 'Duplicate font forced an unnecessary full copy')
+      }
+    } finally { duplicateProbe.close() }
     engine = new MemoryEngine(module)
     const active = engine
     const input = await Deno.readFile(new URL('../fixtures/ci-fonts.ass', import.meta.url))
@@ -56,6 +70,11 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     const [prefix, rest] = text.split('[Fonts]\n')
     const [attachments, events] = rest.split('[Events]')
     require(prefix + '[Events]' + events === original, 'Subtitle content changed')
+    // A source view into WASM becomes detached when allocating a copy forces
+    // growth. Rejection must free the copy with its original length and leave
+    // the engine usable; it must not be mistaken for a guest trap.
+    expectError(() => active.process(module.HEAPU8), 'detached')
+    require(active.process(input).subtitle === text, 'Detached-input recovery changed output')
     // Force growth and re-process: an adapter retaining a stale HEAPU8 fails here.
     const previousBytes = module.HEAPU8.length
     const scratch = module._af_alloc(previousBytes)
@@ -113,7 +132,7 @@ scope.onmessage = async ({ data: { fonts, output } }) => {
     expectError(() => active.process(input), 'closed')
     expectError(() => active.setMissingGlyphPolicy('warn'), 'closed')
     scope.postMessage({ ok: true, checks: ['UTF-8 rejection', 'missing-font rejection', 'malformed-font recovery',
-      'copied font data', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'default warn', 'explicit strict goldens', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'legacy CP936 format 2', 'legacy source identity', 'legacy error/warn', 'close'],
+      'copied font data', 'duplicate copy avoided', 'detached-input recovery', 'response cleared', 'TTC face 1', 'CFF', 'native subset hashes', 'ASS preservation', 'memory.grow', 'default warn', 'explicit strict goldens', 'warning policy', 'invalid policy rejection', 'strict policy recovery', 'legacy CP936 format 2', 'legacy source identity', 'legacy error/warn', 'close'],
       memory_bytes: module.HEAPU8.length, deno: Deno.version.deno })
   } catch (error) {
     scope.postMessage({ ok: false, error: String(error) })

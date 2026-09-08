@@ -16,3 +16,4 @@ assfonts-ass.workspace = true
 assfonts-fonts.workspace = true
 assfonts-harfbuzz.workspace = true
 serde_json.workspace = true
+serde.workspace = true
