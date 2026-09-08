@@ -33,9 +33,23 @@ impl FontCatalog {
     /// Equal-ranked faces use first-added order, then collection face order.
     /// Callers must keep this order stable and aligned with their render oracle.
     pub fn add(&mut self, source: impl Into<String>, bytes: impl Into<Arc<[u8]>>) -> Result<()> {
-        let source = source.into();
         let data = bytes.into();
         let identity = sha256(&data);
+        self.add_identified(source.into(), data, identity)
+    }
+
+    /// Adds borrowed bytes, checking identity before allocating an owned copy.
+    /// A successful new source owns its bytes; duplicates preserve the original
+    /// label and registration order exactly as `add` does.
+    pub fn add_slice(&mut self, source: impl Into<String>, bytes: &[u8]) -> Result<()> {
+        let identity = sha256(bytes);
+        if self.identities.contains(&identity) {
+            return Ok(());
+        }
+        self.add_identified(source.into(), Arc::from(bytes), identity)
+    }
+
+    fn add_identified(&mut self, source: String, data: Arc<[u8]>, identity: String) -> Result<()> {
         if self.identities.contains(&identity) {
             return Ok(());
         }

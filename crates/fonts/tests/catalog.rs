@@ -33,6 +33,29 @@ fn matches_aliases_deduplicates_bytes_and_reports_missing_glyphs() {
 }
 
 #[test]
+fn borrowed_sources_are_owned_and_duplicates_keep_first_registration() {
+    let mut catalog = FontCatalog::default();
+    let mut input = FONT.to_vec();
+    catalog.add_slice("first", &input).unwrap();
+    input.fill(0);
+    catalog.add_slice("duplicate", FONT).unwrap();
+    assert!(catalog.add_slice("invalid", &input).is_err());
+    assert_eq!(catalog.face_count(), 1);
+    let face = catalog
+        .resolve(
+            &FontRequest {
+                family: "Open Sans".into(),
+                weight: 400,
+                italic: false,
+            },
+            &['a'].into(),
+        )
+        .unwrap();
+    assert_eq!(face.source, "first");
+    assert_eq!(&*face.data, FONT);
+}
+
+#[test]
 fn equal_ranked_fonts_follow_explicit_catalog_order_like_libass() {
     let mut catalog = FontCatalog::default();
     catalog.add("first", FONT).unwrap();
