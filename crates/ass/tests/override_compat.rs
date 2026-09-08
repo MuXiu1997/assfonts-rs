@@ -1,4 +1,4 @@
-use assfonts_ass::AssCodec;
+use assfonts_ass::{AssCodec, ParseMode};
 use assfonts_core::{FontRequest, SubtitleCodec};
 
 fn script(text: &str) -> String {
@@ -15,13 +15,14 @@ fn script(text: &str) -> String {
 
 #[test]
 fn unknown_and_visual_prefixes_preserve_font_usage() {
+    let codec = AssCodec::with_mode(ParseMode::Compatible);
     for tags in [
         r"\m\0\N\ASEDARK\fa\nlur\f",
         r"\border3\shade2\fra20\frzmath.sin(3)\fsc\fsHYQiHei",
         r"\unknown(\fnHidden)\ZZZ(\b1)\fnOpen Sans",
     ] {
         assert_eq!(
-            AssCodec.analyze(&script(&format!("{{{tags}}}AB"))).unwrap(),
+            codec.analyze(&script(&format!("{{{tags}}}AB"))).unwrap(),
             AssCodec.analyze(&script("AB")).unwrap(),
             "{tags}"
         );
@@ -30,14 +31,13 @@ fn unknown_and_visual_prefixes_preserve_font_usage() {
 
 #[test]
 fn malformed_bold_prefixes_are_not_silently_ignored() {
+    let codec = AssCodec::with_mode(ParseMode::Compatible);
     assert_eq!(
-        AssCodec
-            .analyze(&script(r"{\b1\border3\blur2\be1}A"))
-            .unwrap(),
+        codec.analyze(&script(r"{\b1\border3\blur2\be1}A")).unwrap(),
         AssCodec.analyze(&script(r"{\b1}A")).unwrap()
     );
     for tag in [r"\blu3", r"\bklur4"] {
-        let usage = AssCodec
+        let usage = codec
             .analyze(&script(&format!(r"{{\b1}}A{{{tag}}}B")))
             .unwrap();
         assert_eq!(
@@ -61,22 +61,21 @@ fn malformed_bold_prefixes_are_not_silently_ignored() {
 
 #[test]
 fn numeric_prefixes_parenthesized_arguments_and_state_resets_match_libass() {
+    let codec = AssCodec::with_mode(ParseMode::Compatible);
     for arg in ["(1)", "1.7", "+1tail"] {
         assert_eq!(
-            AssCodec
-                .analyze(&script(&format!(r"{{\b{arg}}}A")))
-                .unwrap(),
+            codec.analyze(&script(&format!(r"{{\b{arg}}}A"))).unwrap(),
             AssCodec.analyze(&script(r"{\b1}A")).unwrap()
         );
     }
     assert_eq!(
-        AssCodec
+        codec
             .analyze(&script(r"{\i1\i2\q9\p1}m 0 0 l 1 1{\pOops}A"))
             .unwrap(),
         AssCodec.analyze(&script("A")).unwrap()
     );
     assert_eq!(
-        AssCodec.analyze(&script(r"{\fn(Other)}A")).unwrap(),
+        codec.analyze(&script(r"{\fn(Other)}A")).unwrap(),
         AssCodec.analyze(&script(r"{\fnOther}A")).unwrap()
     );
 }

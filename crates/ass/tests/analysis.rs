@@ -1,4 +1,4 @@
-use assfonts_ass::AssCodec;
+use assfonts_ass::{AssCodec, ParseMode};
 use assfonts_core::{Attachment, FontRequest, SubtitleCodec};
 
 fn script(text: &str) -> String {
@@ -329,8 +329,6 @@ fn recoverable_empty_overrides_do_not_lose_font_or_drawing_state() {
         (r"{\fnArial\}X", r"{\fnArial}X"),
         (r"{\\p1}m 0 0 l 10 10{\p0}X", r"{\p1}m 0 0 l 10 10{\p0}X"),
         (r"{\t(0,100,\\fs40)}X", r"{\t(0,100,\fs40)}X"),
-        (r"{\字}X", "X"),
-        (r"{\ fnArial}X", r"{\fnArial}X"),
     ] {
         assert_eq!(
             AssCodec.analyze(&script(original)).unwrap(),
@@ -339,6 +337,15 @@ fn recoverable_empty_overrides_do_not_lose_font_or_drawing_state() {
     }
     for input in [r"{\\fe128}X", r"{\t(\\fnArial)}X"] {
         assert!(AssCodec.analyze(&script(input)).is_err(), "{input}");
+    }
+    for (original, normalized) in [(r"{\字}X", "X"), (r"{\ fnArial}X", r"{\fnArial}X")] {
+        assert!(AssCodec.analyze(&script(original)).is_err());
+        assert_eq!(
+            AssCodec::with_mode(ParseMode::Compatible)
+                .analyze(&script(original))
+                .unwrap(),
+            AssCodec.analyze(&script(normalized)).unwrap()
+        );
     }
 }
 

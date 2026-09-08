@@ -29,6 +29,15 @@ pub struct FontRequest {
 }
 pub type FontUsage = BTreeMap<FontRequest, BTreeSet<char>>;
 
+/// Syntax acceptance is independent of missing-glyph coverage.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ParseMode {
+    #[default]
+    Strict,
+    Compatible,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MissingGlyphPolicy {
@@ -77,6 +86,9 @@ pub struct Attachment {
 
 /// Implementations must reject syntax they cannot safely account for.
 pub trait SubtitleCodec: Send + Sync {
+    fn parse_mode(&self) -> ParseMode {
+        ParseMode::default()
+    }
     fn analyze(&self, subtitle: &str) -> Result<FontUsage>;
     /// Preserve original text and insert the supplied font attachments.
     fn embed(&self, subtitle: &str, fonts: &[Attachment]) -> Result<String>;
@@ -149,6 +161,7 @@ pub struct Report {
     pub output_sha256: String,
     pub fonts: Vec<FontReport>,
     pub missing_glyph_policy: MissingGlyphPolicy,
+    pub parse_mode: ParseMode,
     pub warnings: Vec<FontWarning>,
 }
 
@@ -244,6 +257,7 @@ impl Processor<'_> {
             output_sha256: sha256(output.as_bytes()),
             fonts,
             missing_glyph_policy: policy,
+            parse_mode: self.codec.parse_mode(),
             warnings: plan.warnings,
         };
         Ok(Processed {

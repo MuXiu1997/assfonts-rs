@@ -3,12 +3,40 @@
 
 mod attachment;
 mod override_tags;
+mod strict;
 use ass_core::{parser::ast::Section, Script};
+pub use assfonts_core::ParseMode;
 use assfonts_core::{Attachment, Error, FontRequest, FontUsage, Result, SubtitleCodec};
 use std::{borrow::Cow, collections::BTreeMap};
 
 #[derive(Default)]
 pub struct AssCodec;
+
+/// ASS codec with an explicit syntax acceptance policy.
+#[derive(Default)]
+pub struct ConfiguredAssCodec {
+    mode: ParseMode,
+}
+
+impl AssCodec {
+    pub const fn with_mode(mode: ParseMode) -> ConfiguredAssCodec {
+        ConfiguredAssCodec { mode }
+    }
+}
+
+impl SubtitleCodec for ConfiguredAssCodec {
+    fn parse_mode(&self) -> ParseMode {
+        self.mode
+    }
+
+    fn analyze(&self, subtitle: &str) -> Result<FontUsage> {
+        analyze(subtitle, self.mode)
+    }
+
+    fn embed(&self, subtitle: &str, fonts: &[Attachment]) -> Result<String> {
+        AssCodec.embed(subtitle, fonts)
+    }
+}
 
 fn invalid(message: impl Into<String>) -> Error {
     Error::Subtitle(message.into())
@@ -174,77 +202,7 @@ fn check_transform(args: &str) -> Result<()> {
 
 impl SubtitleCodec for AssCodec {
     fn analyze(&self, subtitle: &str) -> Result<FontUsage> {
-        headers(subtitle)?;
-        let text = subtitle.trim_start_matches('\u{feff}');
-        let parser_text = analysis_text(text);
-        let script = Script::parse(&parser_text).map_err(|e| invalid(e.to_string()))?;
-        if !script.issues().is_empty() {
-            return Err(invalid(format!(
-                "parser diagnostics: {:?}",
-                script.issues()
-            )));
-        }
-        // libass creates this style before reading user definitions. An explicit
-        // Default replaces it; an unknown event style falls back to it.
-        let mut styles = BTreeMap::from([(
-            "Default",
-            FontRequest {
-                family: "Arial".into(),
-                weight: 200,
-                italic: false,
-            },
-        )]);
-        let mut wrap_style = 0;
-        // Restrict WrapStyle lookup to the actual Script Info section.
-        let mut in_info = false;
-        for line in text.lines().map(str::trim) {
-            if line.starts_with('[') {
-                in_info = line.eq_ignore_ascii_case("[Script Info]");
-            }
-            if in_info {
-                if let Some((key, value)) = line.split_once(':') {
-                    if key.eq_ignore_ascii_case("WrapStyle") {
-                        wrap_style = integer(value)?;
-                    }
-                }
-            }
-        }
-        if !(0..=3).contains(&wrap_style) {
-            return Err(invalid("WrapStyle must be 0..3"));
-        }
-        for section in script.sections() {
-            if let Section::Styles(items) = section {
-                for s in items {
-                    let request = FontRequest {
-                        family: font_family(s.fontname)?,
-                        weight: if integer(s.bold)? != 0 { 700 } else { 400 },
-                        italic: integer(s.italic)? != 0,
-                    };
-                    let name = s.name.trim_start_matches('*');
-                    let name = if name.is_empty() { "Default" } else { name };
-                    // libass searches definitions from the end, including
-                    // duplicates. Preserve the original definitions in output.
-                    styles.insert(name, request);
-                }
-            }
-        }
-        let mut usage = FontUsage::new();
-        for section in script.sections() {
-            let Section::Events(events) = section else {
-                continue;
-            };
-            for (event_index, event) in events.iter().enumerate() {
-                if !event.is_dialogue() {
-                    continue;
-                }
-                integer(event.layer)
-                    .map_err(|e| invalid(format!("dialogue {} layer: {e}", event_index + 1)))?;
-                let result =
-                    analyze_event(event.text, event.style, &styles, wrap_style, &mut usage);
-                result.map_err(|e| invalid(format!("dialogue {}: {e}", event_index + 1)))?;
-            }
-        }
-        Ok(usage)
+        analyze(subtitle, ParseMode::default())
     }
 
     fn embed(&self, subtitle: &str, fonts: &[Attachment]) -> Result<String> {
@@ -253,12 +211,93 @@ impl SubtitleCodec for AssCodec {
     }
 }
 
+fn analyze(subtitle: &str, mode: ParseMode) -> Result<FontUsage> {
+    headers(subtitle)?;
+    let text = subtitle.trim_start_matches('\u{feff}');
+    let parser_text = analysis_text(text);
+    let script = Script::parse(&parser_text).map_err(|e| invalid(e.to_string()))?;
+    if !script.issues().is_empty() {
+        return Err(invalid(format!(
+            "parser diagnostics: {:?}",
+            script.issues()
+        )));
+    }
+    // libass creates this style before reading user definitions. An explicit
+    // Default replaces it; an unknown event style falls back to it.
+    let mut styles = BTreeMap::from([(
+        "Default",
+        FontRequest {
+            family: "Arial".into(),
+            weight: 200,
+            italic: false,
+        },
+    )]);
+    let mut wrap_style = 0;
+    // Restrict WrapStyle lookup to the actual Script Info section.
+    let mut in_info = false;
+    for line in text.lines().map(str::trim) {
+        if line.starts_with('[') {
+            in_info = line.eq_ignore_ascii_case("[Script Info]");
+        }
+        if in_info {
+            if let Some((key, value)) = line.split_once(':') {
+                if key.eq_ignore_ascii_case("WrapStyle") {
+                    wrap_style = integer(value)?;
+                }
+            }
+        }
+    }
+    if !(0..=3).contains(&wrap_style) {
+        return Err(invalid("WrapStyle must be 0..3"));
+    }
+    for section in script.sections() {
+        if let Section::Styles(items) = section {
+            for s in items {
+                let request = FontRequest {
+                    family: font_family(s.fontname)?,
+                    weight: if integer(s.bold)? != 0 { 700 } else { 400 },
+                    italic: integer(s.italic)? != 0,
+                };
+                let name = s.name.trim_start_matches('*');
+                let name = if name.is_empty() { "Default" } else { name };
+                // libass searches definitions from the end, including
+                // duplicates. Preserve the original definitions in output.
+                styles.insert(name, request);
+            }
+        }
+    }
+    let mut usage = FontUsage::new();
+    for section in script.sections() {
+        let Section::Events(events) = section else {
+            continue;
+        };
+        for (event_index, event) in events.iter().enumerate() {
+            if !event.is_dialogue() {
+                continue;
+            }
+            integer(event.layer)
+                .map_err(|e| invalid(format!("dialogue {} layer: {e}", event_index + 1)))?;
+            let result = analyze_event(
+                event.text,
+                event.style,
+                &styles,
+                wrap_style,
+                &mut usage,
+                mode,
+            );
+            result.map_err(|e| invalid(format!("dialogue {}: {e}", event_index + 1)))?;
+        }
+    }
+    Ok(usage)
+}
+
 fn analyze_event(
     text: &str,
     style: &str,
     styles: &BTreeMap<&str, FontRequest>,
     wrap_style: i32,
     usage: &mut FontUsage,
+    mode: ParseMode,
 ) -> Result<()> {
     let style = style.trim_start_matches('*');
     let style = if style.eq_ignore_ascii_case("Default") {
@@ -278,7 +317,11 @@ fn analyze_event(
             let end = rest
                 .find('}')
                 .ok_or_else(|| invalid("unclosed override block"))?;
-            for tag in override_tags::parse(&rest[1..end]) {
+            let block = &rest[1..end];
+            if mode == ParseMode::Strict {
+                strict::validate(block, pos + 1)?;
+            }
+            for tag in override_tags::parse(block) {
                 let arg = tag.arg.trim();
                 match tag.name {
                     "fn" => {
