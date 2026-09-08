@@ -8,4 +8,4 @@ publish.workspace = true
 
 [dependencies]
 assfonts-core.workspace = true
-ass-core = { git = "https://github.com/wiedymi/ass-rs.git", rev = "5c944eaaff75d4fa957d965964e6c039a183b6b8", default-features = false, features = ["std", "analysis", "plugins"] }
+ass-core = { git = "https://github.com/MuXiu1997/ass-rs.git", rev = "3e7b1c2ab50e078badc215d1a8d9a503a7956abd", default-features = false, features = ["std", "analysis", "plugins"] }

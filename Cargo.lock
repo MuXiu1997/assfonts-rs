@@ -73,7 +73,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 [[package]]
 name = "ass-core"
 version = "0.1.2"
-source = "git+https://github.com/wiedymi/ass-rs.git?rev=5c944eaaff75d4fa957d965964e6c039a183b6b8#5c944eaaff75d4fa957d965964e6c039a183b6b8"
+source = "git+https://github.com/MuXiu1997/ass-rs.git?rev=3e7b1c2ab50e078badc215d1a8d9a503a7956abd#3e7b1c2ab50e078badc215d1a8d9a503a7956abd"
 dependencies = [
  "ahash",
  "bitflags",

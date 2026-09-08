@@ -2,7 +2,11 @@
 #![forbid(unsafe_code)]
 
 mod attachment;
-use ass_core::{analysis::events::parse_override_block, parser::ast::Section, Script};
+use ass_core::{
+    analysis::events::{parse_override_block, DiagnosticKind, TagDiagnostic},
+    parser::ast::Section,
+    Script,
+};
 use assfonts_core::{Attachment, Error, FontRequest, FontUsage, Result, SubtitleCodec};
 use std::{borrow::Cow, collections::BTreeMap};
 
@@ -146,6 +150,14 @@ fn ignored_tag(name: &str) -> bool {
     )
 }
 
+fn fatal_tag_diagnostics(diagnostics: &[TagDiagnostic<'_>]) -> bool {
+    diagnostics.iter().any(|d| {
+        // Only a genuine empty item is recoverable. In the pinned fork this
+        // preserves the next tag; malformed names/characters remain errors.
+        d.kind != DiagnosticKind::EmptyOverride || d.span != "\\"
+    })
+}
+
 // A transform can change font selection over time; do not silently miss its faces.
 fn check_transform(args: &str) -> Result<()> {
     if !args.starts_with('(') || !args.ends_with(')') {
@@ -157,7 +169,7 @@ fn check_transform(args: &str) -> Result<()> {
     let mut tags = Vec::new();
     let mut diagnostics = Vec::new();
     parse_override_block(&args[start..args.len() - 1], 0, &mut tags, &mut diagnostics);
-    if !diagnostics.is_empty() {
+    if fatal_tag_diagnostics(&diagnostics) {
         return Err(invalid(format!("transform diagnostics: {diagnostics:?}")));
     }
     for tag in tags {
@@ -183,7 +195,16 @@ impl SubtitleCodec for AssCodec {
                 script.issues()
             )));
         }
-        let mut styles = BTreeMap::new();
+        // libass creates this style before reading user definitions. An explicit
+        // Default replaces it; an unknown event style falls back to it.
+        let mut styles = BTreeMap::from([(
+            "Default",
+            FontRequest {
+                family: "Arial".into(),
+                weight: 200,
+                italic: false,
+            },
+        )]);
         let mut wrap_style = 0;
         // Restrict WrapStyle lookup to the actual Script Info section.
         let mut in_info = false;
@@ -210,9 +231,11 @@ impl SubtitleCodec for AssCodec {
                         weight: if integer(s.bold)? != 0 { 700 } else { 400 },
                         italic: integer(s.italic)? != 0,
                     };
-                    if styles.insert(s.name, request).is_some() {
-                        return Err(invalid(format!("duplicate style {}", s.name)));
-                    }
+                    let name = s.name.trim_start_matches('*');
+                    let name = if name.is_empty() { "Default" } else { name };
+                    // libass searches definitions from the end, including
+                    // duplicates. Preserve the original definitions in output.
+                    styles.insert(name, request);
                 }
             }
         }
@@ -248,9 +271,13 @@ fn analyze_event(
     wrap_style: i32,
     usage: &mut FontUsage,
 ) -> Result<()> {
-    let base = styles
-        .get(style)
-        .ok_or_else(|| invalid(format!("unknown style {style:?}")))?;
+    let style = style.trim_start_matches('*');
+    let style = if style.eq_ignore_ascii_case("Default") {
+        "Default"
+    } else {
+        style
+    };
+    let base = styles.get(style).unwrap_or(&styles["Default"]);
     let mut active_style = base;
     let mut current = base.clone();
     let mut drawing = false;
@@ -265,7 +292,7 @@ fn analyze_event(
             let mut tags = Vec::new();
             let mut diagnostics = Vec::new();
             parse_override_block(&rest[1..end], pos + 1, &mut tags, &mut diagnostics);
-            if !diagnostics.is_empty() {
+            if fatal_tag_diagnostics(&diagnostics) {
                 return Err(invalid(format!("tag diagnostics: {diagnostics:?}")));
             }
             for tag in tags {
@@ -305,9 +332,9 @@ fn analyze_event(
                         active_style = if arg.is_empty() {
                             base
                         } else {
-                            styles
-                                .get(arg)
-                                .ok_or_else(|| invalid(format!("unknown reset style {arg:?}")))?
+                            // Unlike event lookup, reset names are exact. A
+                            // missing name resets to this event's base style.
+                            styles.get(arg).unwrap_or(base)
                         };
                         current = active_style.clone();
                     }

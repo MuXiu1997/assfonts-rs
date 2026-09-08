@@ -70,7 +70,6 @@ fn unsupported_or_malformed_input_does_not_succeed() {
         r"{\t(\b700)}X",
         r"{\fe128}X",
         r"{\unknown}X",
-        r"{\rMissing}X",
         "{unclosed",
         r"{\fn@}X",
     ] {
@@ -194,4 +193,95 @@ fn metadata_support_does_not_suppress_other_parser_diagnostics() {
     assert!(AssCodec
         .analyze(&input.replace("[Events]", "[Evnts]"))
         .is_err());
+}
+
+#[test]
+fn dialogue_style_lookup_matches_libass_stars_default_and_last_definition() {
+    let expected = AssCodec.analyze(&script("X")).unwrap();
+    for name in ["*Default", "**dEfAuLt", "Missing"] {
+        let input = script("X").replace("0:00:02.00,Default,", &format!("0:00:02.00,{name},"));
+        assert_eq!(AssCodec.analyze(&input).unwrap(), expected, "{name}");
+    }
+    let duplicate = script("X").replace("Style: Other,", "Style: Default,");
+    assert_eq!(
+        AssCodec.analyze(&duplicate).unwrap(),
+        AssCodec.analyze(&script(r"{\rOther}X")).unwrap()
+    );
+    let starred = script("X").replace("Style: Other,", "Style: **Other,");
+    // ass-core interprets stars on Style definitions as its inheritance
+    // extension. This change does not suppress that parser diagnostic.
+    assert!(AssCodec.analyze(&starred).is_err());
+}
+
+#[test]
+fn missing_reset_uses_original_dialogue_style_not_global_default() {
+    let expected = AssCodec.analyze(&script(r"{\rOther}X")).unwrap();
+    for reset in ["0", "Missing", "*Default", "other"] {
+        let input = script(&format!(r"{{\rDefault\r{reset}}}X"))
+            .replace("0:00:02.00,Default,", "0:00:02.00,Other,");
+        assert_eq!(AssCodec.analyze(&input).unwrap(), expected, "{reset}");
+    }
+    let named_zero = script(r"{\r0}X").replace("Style: Other,", "Style: 0,");
+    assert_eq!(AssCodec.analyze(&named_zero).unwrap(), expected);
+}
+
+#[test]
+fn missing_dialogue_style_uses_libass_implicit_default_without_a_named_default() {
+    let input = script("X").replace("Style: Default,First,", "Style: Custom,First,");
+    let usage = AssCodec.analyze(&input).unwrap();
+    assert_eq!(usage.len(), 1);
+    assert_eq!(
+        usage[&FontRequest {
+            family: "Arial".into(),
+            weight: 200,
+            italic: false
+        }],
+        ['X'].into()
+    );
+}
+
+#[test]
+fn recoverable_empty_overrides_do_not_lose_font_or_drawing_state() {
+    for (original, normalized) in [
+        (r"{\\fnArial\b1}X", r"{\fnArial\b1}X"),
+        (r"{\b1\\rOther}X", r"{\rOther}X"),
+        (r"{\fnArial\}X", r"{\fnArial}X"),
+        (r"{\\p1}m 0 0 l 10 10{\p0}X", r"{\p1}m 0 0 l 10 10{\p0}X"),
+        (r"{\t(0,100,\\fs40)}X", r"{\t(0,100,\fs40)}X"),
+    ] {
+        assert_eq!(
+            AssCodec.analyze(&script(original)).unwrap(),
+            AssCodec.analyze(&script(normalized)).unwrap()
+        );
+    }
+    for input in [
+        r"{\字}X",
+        r"{\ fnArial}X",
+        r"{\\unknown}X",
+        r"{\t(\\fnArial)}X",
+    ] {
+        assert!(AssCodec.analyze(&script(input)).is_err(), "{input}");
+    }
+}
+
+#[test]
+fn color_argument_boundaries_preserve_usage_and_original_subtitle() {
+    let input = script(r"{\alphaFF\3cFFFFFF\1cA0\1alhpa\ccccccc\fnArial}X{\alpha00}Y");
+    assert_eq!(
+        AssCodec.analyze(&input).unwrap(),
+        AssCodec.analyze(&script(r"{\fnArial}XY")).unwrap()
+    );
+    let output = AssCodec
+        .embed(
+            &input,
+            &[Attachment {
+                name: "test_0.ttf".into(),
+                data: b"Cat".to_vec(),
+            }],
+        )
+        .unwrap();
+    assert_eq!(
+        output.replace("[Fonts]\nfontname: test_0.ttf\n1W&U\n\n", ""),
+        input
+    );
 }
