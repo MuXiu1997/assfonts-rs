@@ -85,6 +85,62 @@ fn batch_processing_failure_publishes_nothing() {
 }
 
 #[test]
+fn syntax_mode_defaults_to_strict_and_is_independent_of_glyph_policy() {
+    let tmp = TempDir::new().unwrap();
+    let input = tmp.path().join("input.ass");
+    let out = tmp.path().join("out");
+    for tag in [
+        r"\blu0.8",
+        r"\bklur0.5",
+        r"\unknown",
+        r"\b1.7",
+        r"\i2",
+        r"\q9",
+    ] {
+        let text = ASS.replace("Hello", &format!("{{{tag}}}Hello"));
+        assert_ne!(text, ASS);
+        fs::write(&input, &text).unwrap();
+        for extra in [vec!["--check"], vec![], vec!["--parse-mode", "strict"]] {
+            let result = invoke(&input, &out, &extra);
+            assert!(!result.status.success(), "{tag}");
+            assert!(String::from_utf8_lossy(&result.stderr).contains("strict syntax"));
+            assert!(!out.join("input.assfonts.ass").exists());
+        }
+        let result = invoke(
+            &input,
+            &out,
+            &["--parse-mode", "compatible", "--check", "--json"],
+        );
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let json: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(json["files"][0]["parse_mode"], "compatible");
+        assert_eq!(json["files"][0]["missing_glyph_policy"], "warn");
+    }
+    let text = ASS.replace("Hello", r"{\t(0,1000,\t(0,500,\blur0.8))}Hello");
+    fs::write(&input, &text).unwrap();
+    let result = invoke(&input, &out, &["--json"]);
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let json: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(json["files"][0]["parse_mode"], "strict");
+    assert_eq!(json["files"][0]["missing_glyph_policy"], "warn");
+    let output = fs::read_to_string(out.join("input.assfonts.ass")).unwrap();
+    assert!(output.contains(r"{\t(0,1000,\t(0,500,\blur0.8))}Hello"));
+    assert!(
+        !invoke(&input, &out, &["--parse-mode", "invalid", "--check"])
+            .status
+            .success()
+    );
+}
+
+#[test]
 fn missing_glyph_policy_defaults_to_warn_for_check_and_embed() {
     let tmp = TempDir::new().unwrap();
     let input = tmp.path().join("input.ass");

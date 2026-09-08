@@ -1,5 +1,5 @@
 //! In-memory Emscripten adapter. No file system, process spawning, or CLI parsing.
-use assfonts_ass::AssCodec;
+use assfonts_ass::{AssCodec, ParseMode};
 use assfonts_core::{MissingGlyphPolicy, Processor};
 use assfonts_fonts::FontCatalog;
 use assfonts_harfbuzz::HarfBuzz;
@@ -13,6 +13,7 @@ struct Engine {
     backend: HarfBuzz,
     output: Vec<u8>,
     missing_glyph_policy: MissingGlyphPolicy,
+    parse_mode: ParseMode,
 }
 
 impl Engine {
@@ -55,6 +56,7 @@ pub extern "C" fn af_engine_new() -> *mut std::ffi::c_void {
         backend: HarfBuzz::default(),
         output: Vec::new(),
         missing_glyph_policy: MissingGlyphPolicy::default(),
+        parse_mode: ParseMode::default(),
     }))
     .cast()
 }
@@ -124,7 +126,7 @@ pub unsafe extern "C" fn af_process(
         Err(error) => return engine.error(error),
     };
     let processor = Processor {
-        codec: &AssCodec,
+        codec: &AssCodec::with_mode(engine.parse_mode),
         resolver: &engine.catalog,
         subsetter: &engine.backend,
     };
@@ -150,7 +152,25 @@ pub unsafe extern "C" fn af_process(
     }
 }
 
-/// Selects strict errors (0) or missing-cmap warnings (1, default).
+/// Selects strict syntax (0, default) or libass-compatible acceptance (1).
+/// Invalid values leave the mode unchanged. Both modes support nested animations.
+///
+/// # Safety
+/// `ptr` must identify a live engine, used exclusively during this call.
+/// The previous response is invalidated.
+#[no_mangle]
+pub unsafe extern "C" fn af_set_parse_mode(ptr: *mut std::ffi::c_void, mode: u32) -> i32 {
+    let engine = &mut *ptr.cast::<Engine>();
+    engine.clear_result();
+    engine.parse_mode = match mode {
+        0 => ParseMode::Strict,
+        1 => ParseMode::Compatible,
+        _ => return engine.error("invalid parse mode; expected 0 or 1"),
+    };
+    engine.reply(serde_json::json!({"parse_mode":engine.parse_mode}), true)
+}
+
+/// Selects missing-cmap errors (0) or warnings (1, default).
 /// Invalid values leave the policy unchanged. Warn requires a fixed external
 /// renderer/default-font environment; it does not supply a fallback font.
 ///
@@ -240,6 +260,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parse_mode_is_default_strict_transactional_and_independent() {
+        let engine = af_engine_new();
+        unsafe {
+            assert_eq!((*engine.cast::<Engine>()).parse_mode, ParseMode::Strict);
+            assert_eq!(af_set_parse_mode(engine, u32::MAX), 0);
+            assert_eq!((*engine.cast::<Engine>()).parse_mode, ParseMode::Strict);
+            assert_eq!(af_set_parse_mode(engine, 1), 1);
+            assert_eq!(af_set_parse_mode(engine, 2), 0);
+            assert_eq!((*engine.cast::<Engine>()).parse_mode, ParseMode::Compatible);
+            assert_eq!(
+                (*engine.cast::<Engine>()).missing_glyph_policy,
+                MissingGlyphPolicy::Warn
+            );
+            assert_eq!(af_set_missing_glyph_policy(engine, 0), 1);
+            assert_eq!((*engine.cast::<Engine>()).parse_mode, ParseMode::Compatible);
+            assert_eq!(af_set_parse_mode(engine, 0), 1);
+            assert_eq!((*engine.cast::<Engine>()).parse_mode, ParseMode::Strict);
+            assert_eq!(
+                (*engine.cast::<Engine>()).missing_glyph_policy,
+                MissingGlyphPolicy::Error
+            );
+            af_engine_destroy(engine);
+        }
+    }
+
+    #[test]
     fn policy_validation_is_transactional() {
         let engine = af_engine_new();
         unsafe {
@@ -313,6 +359,7 @@ mod tests {
             assert_eq!(restored.as_bytes(), subtitle);
             assert_eq!(response["report"]["fonts"].as_array().unwrap().len(), 1);
             assert_eq!(response["report"]["missing_glyph_policy"], "warn");
+            assert_eq!(response["report"]["parse_mode"], "strict");
             af_result_clear(engine);
             assert_eq!(af_result_len(engine), 0);
             af_result_clear(engine); // Idempotent, catalog stays available.

@@ -8,6 +8,7 @@ type Module = {
   _af_add_font(engine: number, label: number, labelLength: number, bytes: number, length: number): number
   _af_process(engine: number, bytes: number, length: number): number
   _af_set_missing_glyph_policy(engine: number, policy: number): number
+  _af_set_parse_mode(engine: number, mode: number): number
   _af_result_ptr(engine: number): number
   _af_result_len(engine: number): number
   _af_result_clear(engine: number): void
@@ -34,7 +35,7 @@ export async function instantiateDenoModule(createModule: (options: any) => Prom
 export class MemoryEngine {
   private engine: number
   constructor(readonly module: Module) {
-    // Inherit the core default (warn); callers can explicitly select error.
+    // Inherit strict syntax and warn-on-missing-glyphs defaults independently.
     if (poisoned.has(module)) throw new Error('WASM instance unusable after a trap; terminate its Worker')
     this.engine = this.guest(() => module._af_engine_new())
     if (!this.engine) throw new Error('Engine allocation failed')
@@ -97,6 +98,12 @@ export class MemoryEngine {
     this.requireOpen()
     if (policy !== 'error' && policy !== 'warn') throw new Error('Invalid missing-glyph policy')
     return this.response(this.guest(() => this.module._af_set_missing_glyph_policy(this.engine, policy === 'warn' ? 1 : 0)))
+  }
+
+  setParseMode(mode: 'strict' | 'compatible') {
+    this.requireOpen()
+    if (mode !== 'strict' && mode !== 'compatible') throw new Error('Invalid parse mode')
+    return this.response(this.guest(() => this.module._af_set_parse_mode(this.engine, mode === 'strict' ? 0 : 1)))
   }
 
   close() {

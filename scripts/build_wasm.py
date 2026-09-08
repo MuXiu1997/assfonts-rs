@@ -67,7 +67,7 @@ def main():
     if not re.search(rf"\b{re.escape(pins['emsdk'])}\b", emcc):
         raise RuntimeError("Active Emscripten compiler version mismatch")
     exports = ["_af_alloc", "_af_free", "_af_engine_new", "_af_engine_destroy",
-               "_af_add_font", "_af_process", "_af_set_missing_glyph_policy", "_af_result_ptr", "_af_result_len", "_af_result_clear"]
+               "_af_add_font", "_af_process", "_af_set_missing_glyph_policy", "_af_set_parse_mode", "_af_result_ptr", "_af_result_len", "_af_result_clear"]
     if args.memory_profile:
         exports += ["_af_memory_live", "_af_memory_free", "_af_memory_arena"]
     flags = ["-C", "panic=abort"]

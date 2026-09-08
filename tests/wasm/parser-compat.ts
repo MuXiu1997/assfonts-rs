@@ -5,6 +5,16 @@ export async function verifyParserCompatibility(
 ) {
   const style = original.split('\n').find(line => line.startsWith('Style: Default,'))
   if (!style) throw new Error('Missing Default fixture style')
+  for (const tag of ['\\blu0.8', '\\bklur0.5', '\\unknown', '\\b1.7', '\\i2', '\\q9', '\\t(\\t(\\unknown))']) {
+    const input = new TextEncoder().encode(original.replace('office', '{' + tag + '}office'))
+    let rejected = false
+    try { engine.process(input) }
+    catch (error) {
+      if (!String(error).includes('strict syntax')) throw error
+      rejected = true
+    }
+    if (!rejected) throw new Error('Default strict mode accepted: ' + tag)
+  }
   const variants = [
     ['star-style', original.replaceAll(',Default,,', ',*Default,,')],
     ['color-args', original.replace('\\1c&H000000&\\3c&HFFFFFF&', '\\1c000000\\3cFFFFFF')],
@@ -28,11 +38,19 @@ export async function verifyParserCompatibility(
   for (const [name, input] of variants) {
     if (input === original) throw new Error('Parser fixture did not change: ' + name)
     const isDel = name === 'del-character'
+    const compatibilityOnly = ['unknown-and-prefixes', 'bold-prefix-reset'].includes(name)
+    if (compatibilityOnly) engine.setParseMode('compatible')
     // DEL must reach glyph resolution, including warn mode if this font lacks it.
     if (isDel) engine.setMissingGlyphPolicy('warn')
     let result
     try { result = engine.process(new TextEncoder().encode(input)) }
-    finally { if (isDel) engine.setMissingGlyphPolicy('error') }
+    finally {
+      if (isDel) engine.setMissingGlyphPolicy('error')
+      if (compatibilityOnly) engine.setParseMode('strict')
+    }
+    if (result.report.parse_mode !== (compatibilityOnly ? 'compatible' : 'strict')) {
+      throw new Error('Incorrect parse mode report: ' + name)
+    }
     const hashes = result.report.fonts.map((f: { subset_sha256: string }) => f.subset_sha256).sort()
     if (name === 'bold-prefix-reset' && result.report.fonts.some((f: { requests: { family: string, weight: number }[] }) =>
       f.requests.some(r => r.family === 'Noto Sans SC' && r.weight !== 400))) {

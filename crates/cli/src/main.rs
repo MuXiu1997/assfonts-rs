@@ -3,7 +3,7 @@
 mod backend;
 mod files;
 use anyhow::{bail, Context, Result};
-use assfonts_ass::AssCodec;
+use assfonts_ass::{AssCodec, ParseMode};
 use assfonts_core::{FontResolver, MissingGlyphPolicy, Processor, SubtitleCodec};
 use assfonts_fonts::FontCatalog;
 use clap::Parser;
@@ -42,6 +42,9 @@ struct Args {
     /// Missing cmap glyphs: warn needs the same host fonts/configuration; error rejects missing glyphs
     #[arg(long, default_value = "warn", value_parser = ["error", "warn"])]
     missing_glyphs: String,
+    /// Syntax checks: strict rejects unknown tags/nonstandard integers; both modes support nested animations
+    #[arg(long, default_value = "strict", value_parser = ["strict", "compatible"])]
+    parse_mode: String,
     /// List compiled backends and exit
     #[arg(long)]
     list_backends: bool,
@@ -62,6 +65,12 @@ struct FileReport {
 }
 
 fn run(args: Args) -> Result<()> {
+    let mode = if args.parse_mode == "compatible" {
+        ParseMode::Compatible
+    } else {
+        ParseMode::Strict
+    };
+    let codec = AssCodec::with_mode(mode);
     let policy = if args.missing_glyphs == "warn" {
         MissingGlyphPolicy::Warn
     } else {
@@ -90,7 +99,7 @@ fn run(args: Args) -> Result<()> {
         for input in &inputs {
             let text = fs::read_to_string(input)
                 .with_context(|| format!("read UTF-8 ASS {}", input.display()))?;
-            let usage = AssCodec
+            let usage = codec
                 .analyze(&text)
                 .with_context(|| format!("analyze {}", input.display()))?;
             let plan = catalog
@@ -99,7 +108,7 @@ fn run(args: Args) -> Result<()> {
             if args.verbosity > 0 && !plan.warnings.is_empty() {
                 eprintln!("{}: {} missing-cmap warning(s); fixed renderer/default-font environment required", input.display(), plan.warnings.len());
             }
-            checked.push(serde_json::json!({"input":input,"font_requests":usage.len(),"missing_glyph_policy":policy,"warnings":plan.warnings}));
+            checked.push(serde_json::json!({"input":input,"font_requests":usage.len(),"parse_mode":mode,"missing_glyph_policy":policy,"warnings":plan.warnings}));
         }
         if args.json {
             println!(
@@ -115,7 +124,7 @@ fn run(args: Args) -> Result<()> {
     }
     let backend = backend::create(&args.backend)?;
     let processor = Processor {
-        codec: &AssCodec,
+        codec: &codec,
         resolver: &catalog,
         subsetter: backend.as_ref(),
     };
