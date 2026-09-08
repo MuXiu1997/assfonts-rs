@@ -1,0 +1,370 @@
+{
+  "date": "2026-09-08",
+  "main_base": "a2ea7b172f3f0dd0f2817959b1e7b1e5e0a47a44",
+  "main_uncommitted": true,
+  "fork_sha": "3e7b1c2ab50e078badc215d1a8d9a503a7956abd",
+  "artifacts": {
+    "engine.js": {
+      "sha256": "df787e1d5a28abb3517f3ed4bbc8619c1cb37bc9ff0ff4aefca00c32f38c56d9",
+      "bytes": 11187
+    },
+    "assfonts-wasm.wasm": {
+      "sha256": "f57c3ce3c8bf38bc35d9aa6263329d53627e52a8dcb8362bb9916f986176e46d",
+      "bytes": 1992260
+    }
+  },
+  "cargo_lock_sha256": "24b312c506af7e4148cec768dd4e2a88a35890c93b63b62323f187a01e0c3732",
+  "source_and_artifact_hashes_verified": true,
+  "tdd": {
+    "red_failed": 1,
+    "new_green_tests": 2,
+    "workspace_tests_passed": 61
+  },
+  "checks": [
+    "cargo fmt --all -- --check",
+    "cargo clippy --workspace --all-targets -- -D warnings",
+    "Deno type check",
+    "real WASM Worker"
+  ],
+  "corpus": {
+    "total": 229,
+    "successful": 158,
+    "previous_outputs_and_reports_byte_identical": 146,
+    "unchanged_errors": 69,
+    "targets": [
+      {
+        "id": "s007-0023",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 333
+      },
+      {
+        "id": "s007-0024",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 194
+      },
+      {
+        "id": "s007-0025",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 210
+      },
+      {
+        "id": "s007-0026",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 209
+      },
+      {
+        "id": "s007-0027",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 34: invalid subtitle: transform without tags"
+      },
+      {
+        "id": "s007-0028",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 217
+      },
+      {
+        "id": "s007-0029",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 264
+      },
+      {
+        "id": "s007-0030",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 514: invalid subtitle: malformed transform"
+      },
+      {
+        "id": "s007-0031",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 264
+      },
+      {
+        "id": "s007-0032",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 263
+      },
+      {
+        "id": "s007-0033",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 185
+      },
+      {
+        "id": "s007-0034",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 272
+      },
+      {
+        "id": "s007-0035",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 218
+      },
+      {
+        "id": "s007-0036",
+        "success": true,
+        "memory_bytes": 276561920,
+        "elapsed_ms": 242
+      }
+    ],
+    "remaining": 71,
+    "source_hashes_verified": 229,
+    "successful_sources_preserved": 158
+  },
+  "render": {
+    "real_samples": 53274,
+    "real_cases": [
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 854,
+        "positive_duration_events": 850,
+        "animated_events": 340,
+        "samples": 4475,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3407,
+        "identical_image_lists": 4475,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0023",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 681,
+        "positive_duration_events": 681,
+        "animated_events": 257,
+        "samples": 4199,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3382,
+        "identical_image_lists": 4199,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0024",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 622,
+        "positive_duration_events": 622,
+        "animated_events": 170,
+        "samples": 4508,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3528,
+        "identical_image_lists": 4508,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0025",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 765,
+        "positive_duration_events": 759,
+        "animated_events": 271,
+        "samples": 5158,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 4018,
+        "identical_image_lists": 5158,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0026",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 718,
+        "positive_duration_events": 718,
+        "animated_events": 259,
+        "samples": 4451,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3428,
+        "identical_image_lists": 4451,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0028",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 736,
+        "positive_duration_events": 731,
+        "animated_events": 278,
+        "samples": 5016,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 4007,
+        "identical_image_lists": 5016,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0029",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 672,
+        "positive_duration_events": 672,
+        "animated_events": 254,
+        "samples": 4237,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3349,
+        "identical_image_lists": 4237,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0031",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 645,
+        "positive_duration_events": 645,
+        "animated_events": 264,
+        "samples": 4190,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3383,
+        "identical_image_lists": 4190,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0032",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 708,
+        "positive_duration_events": 708,
+        "animated_events": 250,
+        "samples": 4553,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3522,
+        "identical_image_lists": 4553,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0033",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 689,
+        "positive_duration_events": 689,
+        "animated_events": 254,
+        "samples": 4407,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3446,
+        "identical_image_lists": 4407,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0034",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 669,
+        "positive_duration_events": 669,
+        "animated_events": 256,
+        "samples": 4350,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3460,
+        "identical_image_lists": 4350,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0035",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "libass_version": 24137728,
+        "provider": "NONE",
+        "events": 574,
+        "positive_duration_events": 574,
+        "animated_events": 224,
+        "samples": 3730,
+        "differences": [],
+        "different_frames": 0,
+        "nonempty_frames": 3011,
+        "identical_image_lists": 3730,
+        "old_errors": 0,
+        "rust_errors": 0,
+        "id": "s007-0036",
+        "old_fallback_failures": 0,
+        "rust_fallback_failures": 0
+      }
+    ],
+    "default_family": "Noto Sans SC",
+    "default_file": "/Users/muxiu1997/Projects/assfonts-rs/.validation/ci-fonts/NotoSansSC-Regular.otf",
+    "provider": "NONE",
+    "wasm_fixture_groups": 10,
+    "wasm_fixture_samples": 500,
+    "wasm_fixture_rgba_differences": 0,
+    "missing_attachment_negative_controls_passed": true
+  },
+  "evidence_directory": "/Users/muxiu1997/Documents/Codex/2026-09-07/assfonts-rs-wasm-ass-processor-lib/work/weight.BPYIGI",
+  "wasm_validation_directory": "/Users/muxiu1997/Projects/assfonts-rs/.validation/mise-wasm-_m1_5liy/render",
+  "limits": [
+    "Only low integer bold fallback changed; values above 900 and other numeric syntax not expanded.",
+    "Two targets remain blocked by transform syntax; those rules are unchanged.",
+    "Previous 146 results and reports are byte-identical; their full real-corpus rendering was not repeated.",
+    "Real corpus uses existing warn policy; no claim of cross-platform or full renderer compatibility."
+  ]
+}
