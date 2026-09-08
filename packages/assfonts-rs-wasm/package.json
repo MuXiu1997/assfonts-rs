@@ -1,0 +1,21 @@
+{
+  "name": "@muxiu1997/assfonts-rs-wasm",
+  "version": "0.1.0-beta.0",
+  "description": "ASS font subsetting and embedding with Rust and HarfBuzz WebAssembly",
+  "type": "module",
+  "author": "MuXiu1997 <muxiu1997@muxiu1997.com> (https://github.com/MuXiu1997)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MuXiu1997/assfonts-rs.git",
+    "directory": "packages/assfonts-rs-wasm"
+  },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist/", "README.md", "LICENSE", "THIRD_PARTY.md", "licenses/"],
+  "publishConfig": { "access": "public", "tag": "beta" },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "devDependencies": { "typescript": "5.9.2" }
+}

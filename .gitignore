@@ -2,3 +2,8 @@
 /.validation/
 *.assfonts.ass
 .DS_Store
+/packages/assfonts-rs-wasm/node_modules/
+/packages/assfonts-rs-wasm/dist/
+/packages/assfonts-rs-wasm/licenses/
+/packages/assfonts-rs-wasm/LICENSE
+/packages/assfonts-rs-wasm/THIRD_PARTY.md
