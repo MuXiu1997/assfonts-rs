@@ -75,6 +75,7 @@ cargo build --release --locked
 
 - UTF-8 ASS v4+，Unicode/中英文字体名，TTF、OTF、TTC、OTC。
 - Aegisub 的 Project Garbage、Project、Extradata 段仅在字体分析时跳过，输出原样保留；除下述空标签恢复外，其他解析诊断仍会报错。
+- 第一条段标题之前的前言仅从分析视图屏蔽，不补成 Script Info；正文 Tab 按空格收集，DEL（U+007F）保留为实际字体字符，缺字仍遵循 warn/error 策略。原始字节不改写，其他控制字符仍拒绝。
 - Dialogue 样式查找兼容 libass：忽略前导星号、规范化 Default 大小写、未知名称回退 Default，重复定义使用最后一条；未知命名重置回到当前 Dialogue 的原始样式。
 - 颜色/透明度参数支持省略包裹的十六进制形式；重复或末尾反斜杠产生的空标签可恢复，且不吞掉后续字体/绘图标签。原始字幕不改写。依赖固定到 fork SHA，详见 [解析兼容性](docs/parser-compatibility.md)。
 - 使用到的 Dialogue 字符，`\fn`、`\b`、`\i`、`\r`、命名样式重置。

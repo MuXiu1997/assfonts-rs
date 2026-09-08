@@ -1,0 +1,125 @@
+{
+  "date": "2026-09-08",
+  "main_base": "acb09ecdb55884a4910de75d47115e687d9e26ca",
+  "main_uncommitted": true,
+  "fork_sha": "3e7b1c2ab50e078badc215d1a8d9a503a7956abd",
+  "artifacts": {
+    "engine.js": {
+      "sha256": "df787e1d5a28abb3517f3ed4bbc8619c1cb37bc9ff0ff4aefca00c32f38c56d9",
+      "bytes": 11187
+    },
+    "assfonts-wasm.wasm": {
+      "sha256": "199745141aec267ea5faab1449011abac13ebaa47e4e6054c28ba7399c30005a",
+      "bytes": 1992254
+    }
+  },
+  "cargo_lock_sha256": "24b312c506af7e4148cec768dd4e2a88a35890c93b63b62323f187a01e0c3732",
+  "tdd": {
+    "red_failed": 3,
+    "red_passed": 1,
+    "green_passed": 4
+  },
+  "workspace_tests_passed": 59,
+  "corpus": {
+    "total": 229,
+    "success": 146,
+    "remaining": 83,
+    "remaining_errors_unchanged": 83,
+    "processed": 229,
+    "source_preserved": 146,
+    "previous_outputs_byte_identical": 143,
+    "previous_reports_byte_identical": 143
+  },
+  "new_targets": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "libass_version": 24137728,
+      "provider": "NONE",
+      "events": 520,
+      "positive_duration_events": 519,
+      "animated_events": 8,
+      "samples": 3860,
+      "differences": [],
+      "different_frames": 0,
+      "nonempty_frames": 2053,
+      "identical_image_lists": 3860,
+      "old_errors": 0,
+      "rust_errors": 0,
+      "id": "s045-0001",
+      "old_fallback_failures": 0,
+      "rust_fallback_failures": 0
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "libass_version": 24137728,
+      "provider": "NONE",
+      "events": 2547,
+      "positive_duration_events": 2547,
+      "animated_events": 1851,
+      "samples": 11209,
+      "differences": [],
+      "different_frames": 0,
+      "nonempty_frames": 10204,
+      "identical_image_lists": 11209,
+      "old_errors": 0,
+      "rust_errors": 0,
+      "id": "s054-0013",
+      "old_fallback_failures": 0,
+      "rust_fallback_failures": 0
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "libass_version": 24137728,
+      "provider": "NONE",
+      "events": 582,
+      "positive_duration_events": 582,
+      "animated_events": 93,
+      "samples": 3585,
+      "differences": [],
+      "different_frames": 0,
+      "nonempty_frames": 2741,
+      "identical_image_lists": 3585,
+      "old_errors": 0,
+      "rust_errors": 0,
+      "id": "s057-0007",
+      "old_fallback_failures": 1050,
+      "rust_fallback_failures": 1050
+    }
+  ],
+  "target_warnings": {
+    "s045-0001": [],
+    "s054-0013": [],
+    "s057-0007": [
+      {
+        "code": "missing_cmap_glyphs",
+        "request": {
+          "family": "DFPJinWenW3-B5",
+          "weight": 700,
+          "italic": false
+        },
+        "source": "/Users/muxiu1997/Documents/Codex/2026-09-07/assfonts-rs-wasm-ass-processor-lib/outputs/assfonts-wasm-full-regression-20260907.9OeJbu/catalogs-portable/da39154c69a09946b603e4aa704556895703605a0042e44e752cf11ba84e8dcc/fonts/font-000019.ttc",
+        "face_index": 1,
+        "characters": "吗话",
+        "missing_from_all_candidates": "吗话"
+      }
+    ]
+  },
+  "new_target_render_samples": 18654,
+  "new_target_different_frames": 0,
+  "default_family": "Noto Sans SC",
+  "default_sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9",
+  "synthetic": {
+    "wasm_render_groups": 9,
+    "wasm_render_samples": 450,
+    "different_frames": 0,
+    "probe_pairs": 6,
+    "probe_samples": 36,
+    "negative_pairs": 3,
+    "native_wasm_byte_identical_cases": 3,
+    "native_wasm_subset_render_samples": 18
+  },
+  "evidence_directory": "/Users/muxiu1997/Documents/Codex/2026-09-07/assfonts-rs-wasm-ass-processor-lib/work/controls-structure.I4CF6e"
+}
