@@ -19,8 +19,7 @@ use assfonts_core::{Attachment, Error, Result};
 // Aegisub Project: https://github.com/Aegisub/Aegisub
 
 // ASS uses 6-bit values offset by 33, no length prefix, no padding, 80 columns.
-fn encode(bytes: &[u8], newline: &str) -> String {
-    let mut out = String::new();
+fn encode_into(out: &mut String, bytes: &[u8], newline: &str) {
     let mut column = 0;
     for chunk in bytes.chunks(3) {
         let mut src = [0u8; 3];
@@ -40,7 +39,14 @@ fn encode(bytes: &[u8], newline: &str) -> String {
             column += 1;
         }
     }
-    out
+}
+
+fn encoded_len(bytes: usize, newline_len: usize) -> Option<usize> {
+    let chars = (bytes / 3).checked_mul(4)?.checked_add(match bytes % 3 {
+        0 => 0,
+        n => n + 1,
+    })?;
+    chars.checked_add((chars.saturating_sub(1) / 80).checked_mul(newline_len)?)
 }
 
 pub(super) fn embed(text: &str, fonts: &[Attachment]) -> Result<String> {
@@ -58,8 +64,8 @@ pub(super) fn embed(text: &str, fonts: &[Attachment]) -> Result<String> {
     if offset == text.len() {
         return Err(Error::Subtitle("missing [Events] insertion point".into()));
     }
-    let mut section = format!("[Fonts]{newline}");
     let mut names = std::collections::BTreeSet::new();
+    let mut size = text.len().checked_add("[Fonts]".len() + newline.len());
     for font in fonts {
         if font.data.is_empty()
             || font.name.is_empty()
@@ -73,18 +79,39 @@ pub(super) fn embed(text: &str, fonts: &[Attachment]) -> Result<String> {
                 "empty/invalid/duplicate font attachment".into(),
             ));
         }
-        section.push_str(&format!(
-            "fontname: {}{newline}{}{newline}{newline}",
-            font.name,
-            encode(&font.data, newline)
-        ));
+        size = size
+            .and_then(|n| n.checked_add("fontname: ".len()))
+            .and_then(|n| n.checked_add(font.name.len()))
+            .and_then(|n| n.checked_add(newline.len() * 3))
+            .and_then(|n| n.checked_add(encoded_len(font.data.len(), newline.len())?));
     }
-    Ok(format!("{}{}{}", &text[..offset], section, &text[offset..]))
+    let size = size.ok_or_else(|| Error::Subtitle("font attachments are too large".into()))?;
+    // Append directly to the final subtitle. Avoid an encoded temporary per
+    // font, a formatted copy of it, and a second copy of the whole Fonts section.
+    let mut output = String::with_capacity(size);
+    output.push_str(&text[..offset]);
+    output.push_str("[Fonts]");
+    output.push_str(newline);
+    for font in fonts {
+        output.push_str("fontname: ");
+        output.push_str(&font.name);
+        output.push_str(newline);
+        encode_into(&mut output, &font.data, newline);
+        output.push_str(newline);
+        output.push_str(newline);
+    }
+    output.push_str(&text[offset..]);
+    Ok(output)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn encode(bytes: &[u8], newline: &str) -> String {
+        let mut out = String::new();
+        encode_into(&mut out, bytes, newline);
+        out
+    }
     #[test]
     fn ass_known_vectors_and_line_boundary() {
         assert_eq!(encode(b"Cat", "\n"), "1W&U");
@@ -94,5 +121,18 @@ mod tests {
             encode(&[0; 61], "\r\n"),
             format!("{}\r\n!!", "!".repeat(80))
         );
+    }
+
+    #[test]
+    fn encoded_sizes_cover_partial_groups_and_both_line_endings() {
+        for newline in ["\n", "\r\n"] {
+            for size in 0..1024 {
+                assert_eq!(
+                    encoded_len(size, newline.len()),
+                    Some(encode(&vec![0xff; size], newline).len())
+                );
+            }
+        }
+        assert_eq!(encoded_len(usize::MAX, 2), None);
     }
 }
