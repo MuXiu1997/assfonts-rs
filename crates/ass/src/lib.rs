@@ -2,11 +2,8 @@
 #![forbid(unsafe_code)]
 
 mod attachment;
-use ass_core::{
-    analysis::events::{parse_override_block, DiagnosticKind, TagDiagnostic},
-    parser::ast::Section,
-    Script,
-};
+mod override_tags;
+use ass_core::{parser::ast::Section, Script};
 use assfonts_core::{Attachment, Error, FontRequest, FontUsage, Result, SubtitleCodec};
 use std::{borrow::Cow, collections::BTreeMap};
 
@@ -108,6 +105,7 @@ fn ignored_tag(name: &str) -> bool {
         name,
         "fs" | "fscx"
             | "fscy"
+            | "fsc"
             | "fsp"
             | "fr"
             | "frx"
@@ -153,37 +151,22 @@ fn ignored_tag(name: &str) -> bool {
     )
 }
 
-fn fatal_tag_diagnostics(diagnostics: &[TagDiagnostic<'_>]) -> bool {
-    diagnostics.iter().any(|d| {
-        // Only a genuine empty item is recoverable. In the pinned fork this
-        // preserves the next tag; malformed names/characters remain errors.
-        d.kind != DiagnosticKind::EmptyOverride || d.span != "\\"
-    })
-}
-
 // A transform can change font selection over time; do not silently miss its faces.
 fn check_transform(args: &str) -> Result<()> {
-    let Some(body) = args.strip_prefix('(') else {
-        return Err(invalid("malformed transform"));
-    };
-    // libass accepts a missing closing parenthesis up to the block's end.
-    let body = body.strip_suffix(')').unwrap_or(body);
-    let Some(start) = body.find('\\') else {
-        // No inner tags means no font changes; preserve the original ASS.
-        return Ok(());
-    };
-    let mut tags = Vec::new();
-    let mut diagnostics = Vec::new();
-    parse_override_block(&body[start..], 0, &mut tags, &mut diagnostics);
-    if fatal_tag_diagnostics(&diagnostics) {
-        return Err(invalid(format!("transform diagnostics: {diagnostics:?}")));
-    }
-    for tag in tags {
-        if !ignored_tag(tag.name()) {
-            return Err(Error::Unsupported(format!(
-                "font/state-changing or unknown transform tag \\{}",
-                tag.name()
-            )));
+    let mut pending = vec![(args, 0)];
+    while let Some((body, depth)) = pending.pop() {
+        for tag in override_tags::parse(body) {
+            if tag.name == "t" {
+                if depth >= 64 {
+                    return Err(Error::Unsupported("transform nesting exceeds 64".into()));
+                }
+                pending.push((tag.arg, depth + 1));
+            } else if !ignored_tag(tag.name) {
+                return Err(Error::Unsupported(format!(
+                    "font/state-changing transform tag \\{}",
+                    tag.name
+                )));
+            }
         }
     }
     Ok(())
@@ -295,15 +278,9 @@ fn analyze_event(
             let end = rest
                 .find('}')
                 .ok_or_else(|| invalid("unclosed override block"))?;
-            let mut tags = Vec::new();
-            let mut diagnostics = Vec::new();
-            parse_override_block(&rest[1..end], pos + 1, &mut tags, &mut diagnostics);
-            if fatal_tag_diagnostics(&diagnostics) {
-                return Err(invalid(format!("tag diagnostics: {diagnostics:?}")));
-            }
-            for tag in tags {
-                let arg = tag.args().trim();
-                match tag.name() {
+            for tag in override_tags::parse(&rest[1..end]) {
+                let arg = tag.arg.trim();
+                match tag.name {
                     "fn" => {
                         current.family = if arg.is_empty() || arg == "0" {
                             active_style.family.clone()
@@ -315,7 +292,7 @@ fn analyze_event(
                         current.weight = if arg.is_empty() {
                             active_style.weight
                         } else {
-                            match integer(arg)? {
+                            match override_tags::integer_prefix(arg) {
                                 0 => 400,
                                 1 => 700,
                                 // libass resets invalid low values to the active style,
@@ -330,10 +307,10 @@ fn analyze_event(
                         current.italic = if arg.is_empty() {
                             active_style.italic
                         } else {
-                            match integer(arg)? {
+                            match override_tags::integer_prefix(arg) {
                                 0 => false,
                                 1 => true,
-                                _ => return Err(invalid("italic must be 0 or 1")),
+                                _ => active_style.italic,
                             }
                         }
                     }
@@ -348,16 +325,16 @@ fn analyze_event(
                         current = active_style.clone();
                     }
                     "p" => {
-                        drawing = !arg.is_empty() && integer(arg)? > 0;
+                        drawing = override_tags::integer_prefix(arg) > 0;
                     }
                     "q" => {
                         wrap = if arg.is_empty() {
                             wrap_style
                         } else {
-                            integer(arg)?
+                            override_tags::integer_prefix(arg)
                         };
                         if !(0..=3).contains(&wrap) {
-                            return Err(invalid("wrap mode must be 0..3"));
+                            wrap = wrap_style;
                         }
                     }
                     "t" => check_transform(arg)?,

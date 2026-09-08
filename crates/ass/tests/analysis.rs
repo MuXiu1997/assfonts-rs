@@ -97,8 +97,8 @@ fn unterminated_visual_transforms_keep_the_final_tag_and_next_block() {
         r"\i1",
         r"\rOther",
         r"\p1",
-        r"\unknown",
-        r"\t(\fs20)",
+        r"\fe128",
+        r"\t(\b1)",
     ] {
         for ending in ["", ")"] {
             assert!(
@@ -150,7 +150,7 @@ fn unsupported_or_malformed_input_does_not_succeed() {
     for text in [
         r"{\t(\b700)}X",
         r"{\fe128}X",
-        r"{\unknown}X",
+        r"{\fe128}X",
         "{unclosed",
         r"{\fn@}X",
     ] {
@@ -329,18 +329,15 @@ fn recoverable_empty_overrides_do_not_lose_font_or_drawing_state() {
         (r"{\fnArial\}X", r"{\fnArial}X"),
         (r"{\\p1}m 0 0 l 10 10{\p0}X", r"{\p1}m 0 0 l 10 10{\p0}X"),
         (r"{\t(0,100,\\fs40)}X", r"{\t(0,100,\fs40)}X"),
+        (r"{\字}X", "X"),
+        (r"{\ fnArial}X", r"{\fnArial}X"),
     ] {
         assert_eq!(
             AssCodec.analyze(&script(original)).unwrap(),
             AssCodec.analyze(&script(normalized)).unwrap()
         );
     }
-    for input in [
-        r"{\字}X",
-        r"{\ fnArial}X",
-        r"{\\unknown}X",
-        r"{\t(\\fnArial)}X",
-    ] {
+    for input in [r"{\\fe128}X", r"{\t(\\fnArial)}X"] {
         assert!(AssCodec.analyze(&script(input)).is_err(), "{input}");
     }
 }

@@ -67,7 +67,7 @@ fn control_support_does_not_suppress_other_errors_or_rewrite_source() {
     for ch in ['\0', '\u{1}', '\u{b}', '\u{85}'] {
         assert!(AssCodec.analyze(&script(&format!("A{ch}B"))).is_err());
     }
-    assert!(AssCodec.analyze(&script("A\t{\\unknown}B")).is_err());
+    assert!(AssCodec.analyze(&script("A\t{\\fe128}B")).is_err());
     let input = script("A\tB\u{7f}C");
     let fonts = [Attachment {
         name: "fixture.ttf".into(),
