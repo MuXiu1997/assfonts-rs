@@ -8,6 +8,12 @@
 已实际执行验证。构建、测试与已知内存限制见 [WASM 验证说明](tests/wasm/README.md)。
 它不会自动替换现有 Deno 字幕库或原生 CLI。
 
+npm 包源码位于 [packages/assfonts-rs-wasm](packages/assfonts-rs-wasm/README.md)，
+包名为 `@muxiu1997/assfonts-rs-wasm`。提供带类型的纯内存 API，首版支持 Deno Worker；
+JS/WASM 由 CI 构建、打包并在独立安装目录验证，`wasm-v<version>` tag 触发发布流程。
+`0.1.0-beta.0` 已公开发布，npm trusted publisher 已配置；后续版本通过上述 workflow 发布。
+当前为 beta 阶段，使用时显式指定 `@beta` 或完整 beta 版本，详见包内发布说明。
+
 ## 构建
 
 开发者可从 [mise 统一开发入口](docs/development.md) 开始：安装固定工具后使用
