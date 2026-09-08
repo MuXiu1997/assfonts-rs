@@ -14,6 +14,8 @@ export async function verifyParserCompatibility(
     ['tab-as-space', original.replace('office ffi', 'office\tffi')],
     ['ignored-preamble', '; [Script Info]\n==== ignored preamble ====\nWrapStyle: 0\n' + original],
     ['del-character', original.replace('office', 'office\u007f')],
+    ['tagless-transform', original.replace('office', '{\\t(100,6590)}office')],
+    ['unterminated-transform', original.replace('\\t(0,900,\\fscx120)', '\\t(0,900,\\fscx120')],
     ['bold-style-fallback', original
       .replace('office', '{\\b0\\b20}office')
       .replace('中文标点', '{\\b1\\b2}中文标点')
