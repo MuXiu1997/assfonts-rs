@@ -14,6 +14,10 @@ export async function verifyParserCompatibility(
     ['tab-as-space', original.replace('office ffi', 'office\tffi')],
     ['ignored-preamble', '; [Script Info]\n==== ignored preamble ====\nWrapStyle: 0\n' + original],
     ['del-character', original.replace('office', 'office\u007f')],
+    ['bold-style-fallback', original
+      .replace('office', '{\\b0\\b20}office')
+      .replace('中文标点', '{\\b1\\b2}中文标点')
+      .replace('\\rDefault', '\\rDefault\\b0\\b4')],
   ]
   for (const [name, input] of variants) {
     if (input === original) throw new Error('Parser fixture did not change: ' + name)
