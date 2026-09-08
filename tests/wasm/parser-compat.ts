@@ -16,6 +16,10 @@ export async function verifyParserCompatibility(
     ['del-character', original.replace('office', 'office\u007f')],
     ['tagless-transform', original.replace('office', '{\\t(100,6590)}office')],
     ['unterminated-transform', original.replace('\\t(0,900,\\fscx120)', '\\t(0,900,\\fscx120')],
+    ['unknown-and-prefixes', original.replace('office', '{\\border3\\shade2\\fra0\\frzmath.sin(0)\\ZZZ(\\fnHidden)\\ASEDARK\\N}office')],
+    ['bold-prefix-reset', original.replace('中文标点', '{\\b1\\blu3\\b1\\bklur4}中文标点')],
+    ['nested-transform', original.replace('\\t(0,900,\\fscx120)', '\\t(0,900,\\fscx120\\t(100,700,\\frz0))')],
+    ['first-close-font', original.replace('\\fnNoto Sans SC\\b400', '\\t(\\t(\\fs38)\\fnNoto Sans SC\\b400')],
     ['bold-style-fallback', original
       .replace('office', '{\\b0\\b20}office')
       .replace('中文标点', '{\\b1\\b2}中文标点')
@@ -30,6 +34,10 @@ export async function verifyParserCompatibility(
     try { result = engine.process(new TextEncoder().encode(input)) }
     finally { if (isDel) engine.setMissingGlyphPolicy('error') }
     const hashes = result.report.fonts.map((f: { subset_sha256: string }) => f.subset_sha256).sort()
+    if (name === 'bold-prefix-reset' && result.report.fonts.some((f: { requests: { family: string, weight: number }[] }) =>
+      f.requests.some(r => r.family === 'Noto Sans SC' && r.weight !== 400))) {
+      throw new Error('Malformed bold prefix did not reset the requested weight')
+    }
     if (!isDel && JSON.stringify(hashes) !== JSON.stringify(expectedHashes)) {
       throw new Error('Parser compatibility changed font usage: ' + name)
     }
