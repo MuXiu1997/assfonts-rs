@@ -6,6 +6,9 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+[features]
+memory-profile = []
+
 [[bin]]
 name = "assfonts-wasm"
 path = "src/main.rs"

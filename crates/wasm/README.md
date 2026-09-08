@@ -39,3 +39,10 @@ cargo +1.92.0 test -p assfonts-wasm --locked
 
 测试涵盖错误后恢复、字体复制、正文保留和零长度输入缓冲区。WASM 构建与 Deno
 运行验证由仓库的构建工具链与独立测试入口提供，不能用原生测试代替实际 WASM 执行。
+
+内存测量、优化前后数据、OOM 行为、运行参数和复跑命令见
+[WASM 内存调查](../../docs/validation/2026-09-08-wasm-memory.md)。
+`scripts/build_wasm.py` 的 `--memory-profile` 开启分配器统计；
+`--allocation-trace` 和 `--safe-heap` 要求同时开启 profile，仅用于独立诊断。
+默认保持 `--allocator dlmalloc --growth-step 0.2 --maximum-memory 2147483648`。
+这些参数控制 guest 内存，不是进程 RSS 限额。

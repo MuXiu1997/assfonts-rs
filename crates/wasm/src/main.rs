@@ -206,6 +206,35 @@ pub unsafe extern "C" fn af_result_len(ptr: *mut std::ffi::c_void) -> usize {
 
 fn main() {}
 
+// Diagnostic builds only. Emscripten's pinned dlmalloc uses ten 32-bit size_t
+// fields for mallinfo. These are allocator statistics, not linear capacity or
+// exact application payload sizes; allocated blocks include allocator padding.
+#[cfg(all(feature = "memory-profile", target_os = "emscripten"))]
+mod memory_profile {
+    #[repr(C)]
+    struct MallInfo {
+        fields: [usize; 10],
+    }
+    unsafe extern "C" {
+        fn mallinfo() -> MallInfo;
+    }
+    #[no_mangle]
+    pub extern "C" fn af_memory_live() -> usize {
+        // SAFETY: mallinfo has no arguments and reads this single-threaded heap.
+        unsafe { mallinfo().fields[7] }
+    }
+    #[no_mangle]
+    pub extern "C" fn af_memory_free() -> usize {
+        // SAFETY: as above.
+        unsafe { mallinfo().fields[8] }
+    }
+    #[no_mangle]
+    pub extern "C" fn af_memory_arena() -> usize {
+        // SAFETY: as above.
+        unsafe { mallinfo().fields[0] }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
