@@ -74,7 +74,9 @@ cargo build --release --locked
 ## 当前兼容范围
 
 - UTF-8 ASS v4+，Unicode/中英文字体名，TTF、OTF、TTC、OTC。
-- Aegisub 的 Project Garbage、Project、Extradata 段仅在字体分析时跳过，输出原样保留；其他解析诊断仍会报错。
+- Aegisub 的 Project Garbage、Project、Extradata 段仅在字体分析时跳过，输出原样保留；除下述空标签恢复外，其他解析诊断仍会报错。
+- Dialogue 样式查找兼容 libass：忽略前导星号、规范化 Default 大小写、未知名称回退 Default，重复定义使用最后一条；未知命名重置回到当前 Dialogue 的原始样式。
+- 颜色/透明度参数支持省略包裹的十六进制形式；重复或末尾反斜杠产生的空标签可恢复，且不吞掉后续字体/绘图标签。原始字幕不改写。依赖固定到 fork SHA，详见 [解析兼容性](docs/parser-compatibility.md)。
 - 使用到的 Dialogue 字符，`\fn`、`\b`、`\i`、`\r`、命名样式重置。
 - `\N`、`\n`、`\h`、`\q`，绘图模式 `\p`；绘图坐标不作为字体字符，但非空绘图段仍收集当前字体、字重和斜体依赖。
 - 常用位置、颜色、缩放、描边、淡入淡出、卡拉 OK 标签，以及不改变字体选择的 `\t`。
@@ -86,7 +88,7 @@ cargo build --release --locked
 - 旧式 AAT `mort` 支持非上下文替换：收集替换字形闭包并重编号表，避免丢表后切换至不同的 GSUB 行为；不回退嵌入完整字体。不支持的 `mort` 状态机或损坏表明确报错。详见 [子集兼容策略](docs/subsetting-compatibility.md)。
 - 可选 `BASE` 表若被当前固定 HarfBuzz 的渲染校验器判定无效，则在子集前移除该无效表；合法表照常子集化，不扩大到其他布局表。该策略解决梦源字体错误的 BASE 版本/偏移，不使用完整字体回退。
 
-**明确拒绝**：已有 `[Fonts]`、非 UTF-8、SSA/v4++、未知样式、无法识别的覆盖标签、`\fe`，以及改变字体状态的 `\t`。不能可靠处理的输入返回错误，不输出猜测结果。
+**明确拒绝**：已有 `[Fonts]`、非 UTF-8、SSA/v4++、无法识别的覆盖标签、`\fe`，以及改变字体状态的 `\t`。样式回退后仍找不到所需字体也会报错。不能可靠处理的输入返回错误，不输出猜测结果。
 
 旧编码目前支持 [Microsoft PRC/CP936 format-2 cmap](docs/legacy-cmap.md)：在内存中补充等价 Unicode 映射后正常子集化，原生/WASM 共用固定映射，不依赖系统 iconv，不修改原字体。
 

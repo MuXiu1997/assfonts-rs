@@ -1,0 +1,532 @@
+{
+  "date": "2026-09-08",
+  "fork_sha": "3e7b1c2ab50e078badc215d1a8d9a503a7956abd",
+  "main_base": "331afc1cbea28dbeb6e1e2518c06874662a9368a",
+  "main_uncommitted": true,
+  "artifacts": {
+    "engine.js": {
+      "sha256": "df787e1d5a28abb3517f3ed4bbc8619c1cb37bc9ff0ff4aefca00c32f38c56d9",
+      "bytes": 11187
+    },
+    "assfonts-wasm.wasm": {
+      "sha256": "9135edb085f49e243d2dcdf671d4b1116c7f88223625ab5815599ff6f996085d",
+      "bytes": 1992233
+    }
+  },
+  "cargo_lock_sha256": "24b312c506af7e4148cec768dd4e2a88a35890c93b63b62323f187a01e0c3732",
+  "processing": {
+    "total": 229,
+    "success": 143,
+    "groups": {
+      "empty-tags": {
+        "total": 27,
+        "success": 20,
+        "remaining": 7
+      },
+      "transform": {
+        "total": 23,
+        "success": 0,
+        "remaining": 23
+      },
+      "color-alpha": {
+        "total": 88,
+        "success": 75,
+        "remaining": 13
+      },
+      "other-tags": {
+        "total": 23,
+        "success": 0,
+        "remaining": 23
+      },
+      "styles": {
+        "total": 61,
+        "success": 48,
+        "remaining": 13
+      },
+      "weight": {
+        "total": 4,
+        "success": 0,
+        "remaining": 4
+      },
+      "control-structure": {
+        "total": 3,
+        "success": 0,
+        "remaining": 3
+      }
+    },
+    "remaining": [
+      {
+        "id": "s003-0009",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 15: unsupported input: override tag \\m"
+      },
+      {
+        "id": "s004-0002",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 2467: unsupported input: font/state-changing or unknown transform tag \\frzmath"
+      },
+      {
+        "id": "s004-0003",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 19317: unsupported input: override tag \\fsc"
+      },
+      {
+        "id": "s004-0004",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 2466: unsupported input: font/state-changing or unknown transform tag \\frzmath"
+      },
+      {
+        "id": "s004-0005",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 2542: unsupported input: font/state-changing or unknown transform tag \\frzmath"
+      },
+      {
+        "id": "s004-0006",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 2450: unsupported input: font/state-changing or unknown transform tag \\frzmath"
+      },
+      {
+        "id": "s004-0007",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 19050: unsupported input: override tag \\fsc"
+      },
+      {
+        "id": "s004-0008",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 19190: unsupported input: override tag \\fsc"
+      },
+      {
+        "id": "s004-0009",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 19180: unsupported input: override tag \\fsc"
+      },
+      {
+        "id": "s004-0010",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 19277: unsupported input: override tag \\fsc"
+      },
+      {
+        "id": "s004-0011",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 19201: unsupported input: override tag \\fsc"
+      },
+      {
+        "id": "s004-0012",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 577: unsupported input: override tag \\0"
+      },
+      {
+        "id": "s004-0014",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 17: unsupported input: override tag \\n"
+      },
+      {
+        "id": "s005-0007",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 299: invalid subtitle: malformed transform"
+      },
+      {
+        "id": "s007-0023",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 389: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0024",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 4: unsupported input: bold weight 2"
+      },
+      {
+        "id": "s007-0025",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 137: unsupported input: bold weight 2"
+      },
+      {
+        "id": "s007-0026",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 3: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0027",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 34: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0028",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 9: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0029",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 3: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0030",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 11: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0031",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 11: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0032",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 37: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0033",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 30: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0034",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 32: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0035",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 21: unsupported input: bold weight 20"
+      },
+      {
+        "id": "s007-0036",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 89: unsupported input: bold weight 4"
+      },
+      {
+        "id": "s007-0048",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 59: unsupported input: override tag \\border"
+      },
+      {
+        "id": "s007-0062",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 355: unsupported input: override tag \\ASEDARK"
+      },
+      {
+        "id": "s007-0063",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 278: unsupported input: override tag \\ASEDARK"
+      },
+      {
+        "id": "s007-0064",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 255: unsupported input: override tag \\ASEDARK"
+      },
+      {
+        "id": "s007-0065",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 114: unsupported input: override tag \\border"
+      },
+      {
+        "id": "s007-0066",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 52: unsupported input: override tag \\border"
+      },
+      {
+        "id": "s007-0067",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 141: unsupported input: override tag \\border"
+      },
+      {
+        "id": "s007-0068",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 277: unsupported input: override tag \\ASEDARK"
+      },
+      {
+        "id": "s007-0069",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 40: unsupported input: override tag \\border"
+      },
+      {
+        "id": "s007-0070",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 351: unsupported input: override tag \\ASEDARK"
+      },
+      {
+        "id": "s007-0071",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 807: unsupported input: override tag \\ASEDARK"
+      },
+      {
+        "id": "s010-0005",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 952: unsupported input: override tag \\fra"
+      },
+      {
+        "id": "s010-0007",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 976: unsupported input: override tag \\blu"
+      },
+      {
+        "id": "s010-0013",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 188: unsupported input: override tag \\8"
+      },
+      {
+        "id": "s010-0017",
+        "success": false,
+        "error": "Error: font resolution failed: font \"華康唐風隸\" not found in supplied sources"
+      },
+      {
+        "id": "s010-0021",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 576: unsupported input: override tag \\0"
+      },
+      {
+        "id": "s010-0024",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 308: unsupported input: override tag \\bklur"
+      },
+      {
+        "id": "s017-0009",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 360: unsupported input: font/state-changing or unknown transform tag \\9"
+      },
+      {
+        "id": "s022-0030",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 398: invalid subtitle: transform without tags"
+      },
+      {
+        "id": "s024-0001",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 37: invalid subtitle: malformed transform"
+      },
+      {
+        "id": "s024-0002",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 39: invalid subtitle: malformed transform"
+      },
+      {
+        "id": "s024-0003",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 41: invalid subtitle: malformed transform"
+      },
+      {
+        "id": "s024-0004",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 38: invalid subtitle: malformed transform"
+      },
+      {
+        "id": "s024-0005",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 36: invalid subtitle: malformed transform"
+      },
+      {
+        "id": "s024-0006",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 38: invalid subtitle: malformed transform"
+      },
+      {
+        "id": "s024-0011",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 731: unsupported input: override tag \\3"
+      },
+      {
+        "id": "s025-0011",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 2643: unsupported input: override tag \\fsc"
+      },
+      {
+        "id": "s027-0020",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 711: unsupported input: override tag \\fsHYQiHei"
+      },
+      {
+        "id": "s027-0021",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 703: unsupported input: override tag \\fsHYQiHei"
+      },
+      {
+        "id": "s027-0022",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 810: unsupported input: override tag \\fsHYQiHei"
+      },
+      {
+        "id": "s028-0003",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 7: unsupported input: override tag \\N"
+      },
+      {
+        "id": "s028-0005",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 6: unsupported input: override tag \\N"
+      },
+      {
+        "id": "s028-0010",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 6: unsupported input: override tag \\N"
+      },
+      {
+        "id": "s028-0013",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 6: unsupported input: override tag \\N"
+      },
+      {
+        "id": "s032-0001",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 345: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0002",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 424: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0003",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 443: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0004",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 341: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0005",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 383: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0006",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 440: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0007",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 385: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0008",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 435: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0009",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 497: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0010",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 484: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0011",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 470: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s032-0012",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 397: unsupported input: font/state-changing or unknown transform tag \\t"
+      },
+      {
+        "id": "s033-0003",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 572: unsupported input: override tag \\8"
+      },
+      {
+        "id": "s038-0007",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 51: unsupported input: override tag \\nlur"
+      },
+      {
+        "id": "s038-0011",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 52: unsupported input: override tag \\nlur"
+      },
+      {
+        "id": "s040-0043",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 24: unsupported input: override tag \\fa"
+      },
+      {
+        "id": "s043-0007",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 706: unsupported input: override tag \\shade"
+      },
+      {
+        "id": "s045-0001",
+        "success": false,
+        "error": "Error: invalid subtitle: parser diagnostics: [ParseIssue { severity: Error, category: Structure, message: \"Failed to parse section: Parse error: Expected section header like [Script Info] at line 7\", line: 7, column: None, span: None, suggestion: None }]"
+      },
+      {
+        "id": "s045-0010",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 25: unsupported input: override tag \\N"
+      },
+      {
+        "id": "s045-0020",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 33: unsupported input: override tag \\f"
+      },
+      {
+        "id": "s053-0012",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 116: unsupported input: override tag \\fa"
+      },
+      {
+        "id": "s054-0013",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 171: unsupported input: control character '\\t'"
+      },
+      {
+        "id": "s057-0007",
+        "success": false,
+        "error": "Error: invalid subtitle: dialogue 566: unsupported input: control character '\\u{7f}'"
+      },
+      {
+        "id": "s057-0009",
+        "success": false,
+        "error": "Error: font resolution failed: font \"Arial\" not found in supplied sources"
+      }
+    ]
+  },
+  "render": {
+    "default_family": "Noto Sans SC",
+    "provider": "NONE",
+    "default_sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9",
+    "samples": 1008011,
+    "different_frames": 0,
+    "cases": 143,
+    "renderer_errors": 0,
+    "fallback_logs": [
+      {
+        "id": "s014-0003",
+        "old_fallback_failures": 12,
+        "rust_fallback_failures": 12
+      },
+      {
+        "id": "s014-0007",
+        "old_fallback_failures": 64,
+        "rust_fallback_failures": 64
+      },
+      {
+        "id": "s014-0011",
+        "old_fallback_failures": 24,
+        "rust_fallback_failures": 24
+      },
+      {
+        "id": "s018-0011",
+        "old_fallback_failures": 25,
+        "rust_fallback_failures": 25
+      },
+      {
+        "id": "s041-0001",
+        "old_fallback_failures": 11,
+        "rust_fallback_failures": 11
+      }
+    ]
+  },
+  "synthetic_render": {
+    "groups": 6,
+    "samples": 300,
+    "different_pixels": 0
+  },
+  "evidence_directory": "/Users/muxiu1997/Documents/Codex/2026-09-07/assfonts-rs-wasm-ass-processor-lib/work/ass-rs-tdd.cZmuUz"
+}
