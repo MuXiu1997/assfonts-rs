@@ -63,16 +63,19 @@ fn headers(text: &str) -> Result<()> {
     Ok(())
 }
 
-// Editor metadata is not rendered. Hide only these known sections from the
-// syntax parser; keep the original bytes for embedding and all other diagnostics.
+// libass ignores the preamble before any section; it is not implicit Script Info.
+// Hide it and known editor metadata only from analysis, preserving original bytes.
 // Comment out each line in place to retain diagnostic line/byte positions.
 fn analysis_text(text: &str) -> Cow<'_, str> {
     let mut masked: Option<Vec<u8>> = None;
     let mut metadata = false;
+    let mut preamble = true;
     let mut offset = 0;
     for line in text.split_inclusive('\n') {
         let trimmed = line.trim();
         if trimmed.starts_with('[') {
+            // Unknown or malformed section headers must still reach the parser.
+            preamble = false;
             metadata = [
                 "[Aegisub Project Garbage]",
                 "[Aegisub Project]",
@@ -81,7 +84,7 @@ fn analysis_text(text: &str) -> Cow<'_, str> {
             .iter()
             .any(|header| trimmed.eq_ignore_ascii_case(header));
         }
-        if metadata && !trimmed.is_empty() {
+        if (preamble || metadata) && !trimmed.is_empty() {
             let bytes = masked.get_or_insert_with(|| text.as_bytes().to_vec());
             for byte in &mut bytes[offset..offset + line.len()] {
                 if !matches!(*byte, b'\r' | b'\n') {
@@ -389,7 +392,11 @@ fn analyze_event(
                             _ => (), // libass renders unknown escapes as literal text.
                         }
                     }
-                    if ch.is_control() {
+                    // libass maps literal TAB to space, but DEL can have a glyph.
+                    if ch == '\t' {
+                        ch = ' ';
+                    }
+                    if ch.is_control() && ch != '\u{7f}' {
                         return Err(Error::Unsupported(format!("control character {ch:?}")));
                     }
                     usage.entry(current.clone()).or_default().insert(ch);
